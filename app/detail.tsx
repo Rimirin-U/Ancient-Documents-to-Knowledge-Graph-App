@@ -93,9 +93,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderStyle: "dashed",
+    borderColor: "gray",
     alignItems: "center",
     justifyContent: "center",
     opacity: 0.6,
-    color: "white"
   },
 });
