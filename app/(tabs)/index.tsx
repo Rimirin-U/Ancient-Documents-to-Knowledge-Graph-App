@@ -43,7 +43,9 @@ export default function Index() {
     const result = await ImagePicker.launchCameraAsync({
       quality: 1,
     });
-
+    // log
+    console.log(result);
+    // after
     if (!result.canceled) {
       goDetail(result.assets[0].uri);
     }

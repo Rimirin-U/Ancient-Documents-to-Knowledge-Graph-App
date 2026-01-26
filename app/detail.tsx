@@ -13,9 +13,7 @@ export default function Detail() {
   const { imageUri } = useLocalSearchParams<{
     imageUri?: string;
   }>();
-  
-  const [imageHeight, setImageHeight] = useState<number | null>(null);
-
+  const [imageHeight, setImageHeight] = useState<number>(1);
   if (!imageUri) {
     return <ThemedText>错误 - 无图片</ThemedText>;
   }
