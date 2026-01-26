@@ -5,6 +5,7 @@ import { Image } from "expo-image";
 
 import { ScrollView, StyleSheet, Dimensions, View } from "react-native";
 import { useState } from "react";
+import { Collapsible } from "@/components/ui/collapsible";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -41,27 +42,23 @@ export default function Detail() {
 
       {/* 文本 */}
       <ThemedView style={styles.textSection}>
-        <ThemedText style={styles.sectionTitle}>
-          识别结果
-        </ThemedText>
-
-        <ThemedText>
-          OCR识别得到的文本内容
-          {"\n"}
-        </ThemedText>
+        <Collapsible title="识别结果" initial_open={true}>
+          <ThemedText>
+            OCR识别得到的文本内容
+            {"\n"}
+          </ThemedText>
+        </Collapsible>
       </ThemedView>
 
       {/* 图谱 */}
       <ThemedView style={styles.chartSection}>
-        <ThemedText style={styles.sectionTitle}>
-          图谱
-        </ThemedText>
-
-        <View style={styles.chartPlaceholder}>
-          <ThemedText>
-            ECharts
-          </ThemedText>
-        </View>
+        <Collapsible title="图谱" initial_open={true}>
+          <ThemedView style={styles.chartPlaceholder}>
+            <ThemedText>
+              ECharts
+            </ThemedText>
+          </ThemedView>
+        </Collapsible>
       </ThemedView>
     </ScrollView>
   );
@@ -99,5 +96,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     opacity: 0.6,
+    color: "white"
   },
 });

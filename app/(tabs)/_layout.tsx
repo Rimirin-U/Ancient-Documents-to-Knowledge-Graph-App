@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -14,16 +15,18 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: '主页',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: '历史',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="info.bubble.fill" color={color} />
         }}
       />
       {/*
-      <Tabs.Screen
-        name="mytest"
-        options={{
-          title: 'Test!',
-        }}
-      />
       <Tabs.Screen
         name="explore"
         options={{
