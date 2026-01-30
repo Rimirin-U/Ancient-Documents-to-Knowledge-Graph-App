@@ -3,30 +3,74 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Image } from "expo-image";
 import { useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { Dimensions, ScrollView, StyleSheet, useColorScheme } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, Dimensions, Pressable, ScrollView, StyleSheet, useColorScheme } from "react-native";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function Detail() {
-  const { imageUri } = useLocalSearchParams<{ imageUri?: string }>();
+  const { analysisId, imageUri } = useLocalSearchParams<{ analysisId?: string; imageUri?: string }>();
   const colorScheme = useColorScheme();
   const [imageHeight, setImageHeight] = useState<number>(1);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!imageUri) {
-    return <ThemedText>错误 - 无图片</ThemedText>;
+  if (!analysisId || !imageUri) {
+    return <ThemedText>错误 - 缺少参数</ThemedText>;
   }
 
-  // 测试数据
-  const nodes = [
-    { id: "file2_node0", name: "劉永濟", type: "person", category: "立約人", symbolSize: 40 },
-    { id: "file2_node1", name: "白田四形", type: "object", category: "标的", symbolSize: 35 }
-  ];
-  const links = [
-    { source: "file2_node0", target: "file2_node1", value: "出让" }
-  ];
-  const categories = [{ name: "立約人" }, { name: "标的" }];
+  // 获取分析数据
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://192.168.3.41:3000/api/analysis/${analysisId}`);
+      if (!response.ok) {
+        throw new Error('获取数据失败');
+      }
+      const result = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '未知错误');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [analysisId]);
+
+  const retry = () => {
+    Alert.alert('重试', '重新加载数据？', [
+      { text: '取消' },
+      { text: '确定', onPress: fetchData }
+    ]);
+  };
+
+  if (loading) {
+    return (
+      <ThemedView style={styles.loading}>
+        <ActivityIndicator size="large" />
+        <ThemedText>分析中...</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (error) {
+    return (
+      <ThemedView style={styles.error}>
+        <ThemedText>错误: {error}</ThemedText>
+        <Pressable onPress={retry}>
+          <ThemedText>重试</ThemedText>
+        </Pressable>
+      </ThemedView>
+    );
+  }
+
+  const { nodes, links, categories, txt } = data;
 
   const option = {
     title: {
@@ -35,7 +79,7 @@ export default function Detail() {
     },
     tooltip: { trigger: 'item' },
     legend: {
-      data: categories.map(cat => cat.name),
+      data: categories.map((cat: any) => cat.name),
       bottom: 10,
     },
     series: [{
@@ -59,7 +103,7 @@ export default function Detail() {
       edgeLength: 200,     // 边长
       friction: 0.4,       // 摩擦力
       layoutAnimation: true
-    },
+    },  
   };
 
   // page
@@ -81,7 +125,7 @@ export default function Detail() {
 
       <ThemedView style={styles.section}>
         <ThemedText type="defaultSemiBold" style={styles.head}>识别结果</ThemedText>
-        <ThemedText>OCR 识别得到的文本内容</ThemedText>
+        <ThemedText>{ txt }</ThemedText>
       </ThemedView>
 
       <ThemedView style={styles.section}>
@@ -104,5 +148,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     marginVertical:12
+  },
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  error: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
   },
 });

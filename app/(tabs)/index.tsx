@@ -1,13 +1,13 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 
+import * as ImagePicker from 'expo-image-picker';
 import { Pressable } from "react-native";
-import * as ImagePicker from 'expo-image-picker'
 
-import { StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { useRouter } from "expo-router";
+import { Alert, StyleSheet } from "react-native";
 import { SFSymbols7_0 } from "sf-symbols-typescript";
 
 
@@ -15,12 +15,53 @@ export default function Index() {
   const router = useRouter();
   const color = useThemeColor({ light: "black", dark: "white" }, 'text');
 
-  // 传递图片
-  const goDetail = (uri: string) => {
+  // 传递分析ID
+  const goDetail = (analysisId: string, imageUri: string) => {
     router.push({
       pathname: "/detail",
-      params: { imageUri: uri },
+      params: { analysisId, imageUri },
     });
+  };
+
+  // 获取图片MIME类型
+  const getMimeType = (fileName: string): string => {
+    const ext = fileName.toLowerCase().split('.').pop();
+    const mimeTypes: { [key: string]: string } = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'bmp': 'image/bmp',
+    };
+    return mimeTypes[ext || ''] || 'image/jpeg';
+  };
+
+  // 上传图片
+  const uploadImage = async (uri: string, fileName: string) => {
+    const mimeType = getMimeType(fileName);
+    const formData = new FormData();
+    formData.append('image', {
+      uri: uri,
+      type: mimeType,
+      name: fileName,
+    } as any);
+
+    try {
+      const response = await fetch('http://192.168.3.41:3000/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await response.json();
+      if (result.success) {
+        goDetail(result.analysisId, uri); // ID, URI
+      } else {
+        Alert.alert('上传失败', '请重试');
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('网络错误', '请检查网络连接');
+    }
   };
 
   // 选择图片
@@ -34,7 +75,9 @@ export default function Index() {
     console.log(result);
     // after
     if (!result.canceled) {
-      goDetail(result.assets[0].uri);
+      const asset = result.assets[0];
+      const fileName = asset.fileName || `image_${Date.now()}.jpg`;
+      await uploadImage(asset.uri, fileName);
     }
   };
 
@@ -47,7 +90,9 @@ export default function Index() {
     console.log(result);
     // after
     if (!result.canceled) {
-      goDetail(result.assets[0].uri);
+      const asset = result.assets[0];
+      const fileName = asset.fileName || `photo_${Date.now()}.jpg`;
+      await uploadImage(asset.uri, fileName);
     }
   };
 
