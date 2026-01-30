@@ -7,6 +7,8 @@ export function Chart({ option, onGesture, theme }:
   { option: any, onGesture: (isBusy: boolean) => void, theme: 'light'|'dark' }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  console.log("default");
+
   // on option change - send message to iframe
   useEffect(() => {
     if (!iframeRef.current?.contentWindow) return;
