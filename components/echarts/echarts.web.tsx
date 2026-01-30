@@ -1,95 +1,55 @@
-import * as echarts from "echarts";
 import React, { useEffect, useRef } from "react";
+import { getChartHtml } from "./echartsHtml";
 
 const E_HEIGHT = 350;
 
 export function Chart({ option, onGesture, theme }: 
   { option: any, onGesture: (isBusy: boolean) => void, theme: 'light'|'dark' }) {
-  const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartInstanceRef = useRef<echarts.ECharts | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Initialize chart instance
+  // on option change - send message to iframe
   useEffect(() => {
-    if (!chartContainerRef.current) return;
-
-    // Dispose previous instance if exists
-    if (chartInstanceRef.current) {
-      chartInstanceRef.current.dispose();
-    }
-
-    // Initialize new chart with theme
-    const chartInstance = echarts.init(
-      chartContainerRef.current,
-      theme === 'dark' ? 'dark' : 'light'
-    );
-
-    chartInstanceRef.current = chartInstance;
-
-    // Handle chart click events
-    chartInstance.on('click', (params: any) => {
-      console.log('Chart click:', params.name);
-    });
-
-    // Handle window resize
-    const handleResize = () => {
-      chartInstance.resize();
+    if (!iframeRef.current?.contentWindow) return;
+    
+    const message = {
+      type: 'updateChart',
+      option: option,
+      theme: theme
     };
-    window.addEventListener('resize', handleResize);
+    iframeRef.current.contentWindow.postMessage(JSON.stringify(message), '*');
+  }, [option, theme]);
 
-    // Cleanup
+  // Setup message listener for gesture events
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (typeof data === 'string') {
+        try {
+          const parsedData = JSON.parse(data);
+          if (parsedData.type === 'gesture') {
+            onGesture(parsedData.active);
+          }
+        } catch (error) {
+          console.error('Failed to parse message:', error);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
     return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [theme]);
-
-  // Update chart option when it changes
-  useEffect(() => {
-    if (chartInstanceRef.current) {
-      chartInstanceRef.current.setOption(option);
-    }
-  }, [option]);
-
-  // Handle gesture events
-  useEffect(() => {
-    const container = chartContainerRef.current;
-    if (!container) return;
-
-    const handleTouchStart = () => {
-      onGesture(true);
-    };
-
-    const handleTouchEnd = () => {
-      onGesture(false);
-    };
-
-    const handleTouchCancel = () => {
-      onGesture(false);
-    };
-
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
-    container.addEventListener('touchend', handleTouchEnd);
-    container.addEventListener('touchcancel', handleTouchCancel);
-
-    return () => {
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchend', handleTouchEnd);
-      container.removeEventListener('touchcancel', handleTouchCancel);
+      window.removeEventListener('message', handleMessage);
     };
   }, [onGesture]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.dispose();
-        chartInstanceRef.current = null;
-      }
-    };
-  }, []);
+  // Create blob URL for iframe
+  const iframeHtml = getChartHtml(option, theme);
+  const blobUrl = React.useMemo(() => {
+    const blob = new Blob([iframeHtml], { type: 'text/html' });
+    return URL.createObjectURL(blob);
+  }, [iframeHtml]);
 
   return (
     <div
-      ref={chartContainerRef}
       style={{
         width: 'calc(100% - 32px)',
         height: `${E_HEIGHT}px`,
@@ -101,6 +61,18 @@ export function Chart({ option, onGesture, theme }:
         borderWidth: '1px',
         margin: '0 16px',
       }}
-    />
+    >
+      <iframe
+        ref={iframeRef}
+        src={blobUrl}
+        style={{
+          width: '100%',
+          height: '100%',
+          border: 'none',
+          borderRadius: '16px',
+        }}
+        title="echarts"
+      />
+    </div>
   );
 }

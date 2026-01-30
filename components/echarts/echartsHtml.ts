@@ -1,5 +1,4 @@
 export function getChartHtml(option: any, theme: 'light'|'dark') {
-  const isDark = theme === 'dark';
   return `
   <!DOCTYPE html>
   <html>
@@ -32,10 +31,15 @@ export function getChartHtml(option: any, theme: 'light'|'dark') {
           myChart = echarts.init(document.getElementById('main'), newTheme === 'dark' ? 'dark' : null);
           // 事件
           myChart.on('click', function(params) {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
+            var message = {
               type: 'click',
               data: params.name
-            }));
+            };
+            if (typeof window.ReactNativeWebView !== 'undefined') {
+              window.ReactNativeWebView.postMessage(JSON.stringify(message));
+            } else if (window.parent !== window) {
+              window.parent.postMessage(JSON.stringify(message), '*');
+            }
           });
         }
 
@@ -60,14 +64,39 @@ export function getChartHtml(option: any, theme: 'light'|'dark') {
         // 交互逻辑
         var container = document.getElementById('main');
         container.addEventListener('touchstart', function() {
-          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'gesture', active: true }));
+          var message = { type: 'gesture', active: true };
+          if (typeof window.ReactNativeWebView !== 'undefined') {
+            window.ReactNativeWebView.postMessage(JSON.stringify(message));
+          } else if (window.parent !== window) {
+            window.parent.postMessage(JSON.stringify(message), '*');
+          }
         }, { passive: true });
 
         function endGesture() {
-          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'gesture', active: false }));
+          var message = { type: 'gesture', active: false };
+          if (typeof window.ReactNativeWebView !== 'undefined') {
+            window.ReactNativeWebView.postMessage(JSON.stringify(message));
+          } else if (window.parent !== window) {
+            window.parent.postMessage(JSON.stringify(message), '*');
+          }
         }
         container.addEventListener('touchend', endGesture);
         container.addEventListener('touchcancel', endGesture);
+
+        // 从父页面接收消息更新图表
+        window.addEventListener('message', function(event) {
+          var data = event.data;
+          if (typeof data === 'string') {
+            try {
+              data = JSON.parse(data);
+            } catch (e) {
+              return;
+            }
+          }
+          if (data.type === 'updateChart') {
+            setChartOption(data.option, data.theme);
+          }
+        });
       </script>
     </body>
   </html>
