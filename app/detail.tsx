@@ -1,232 +1,202 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Collapsible } from "@/components/ui/collapsible";
 import { Image } from "expo-image";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Dimensions, ScrollView, StyleSheet } from "react-native";
-
-// ECharts
-import { SvgChart, SVGRenderer } from '@wuba/react-native-echarts';
-import {
-  GraphChart
-} from 'echarts/charts';
-import {
-  LegendComponent,
-  TitleComponent,
-  TooltipComponent,
-} from 'echarts/components';
-import * as echarts from 'echarts/core';
-
-echarts.use([
-  GraphChart,
-  TitleComponent,
-  TooltipComponent,
-  LegendComponent,
-  SVGRenderer,
-]);
-
+import { Dimensions, ScrollView, StyleSheet, View } from "react-native";
+import { WebView } from "react-native-webview";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const E_HEIGHT = 250;
+const E_HEIGHT = 350;
 
-// ECharts initialize
-function ChartComponent({ option }) {
-  const chartRef = useRef<any>(null); // component
-  useEffect(() => {
-    let chart: any;
-    if (chartRef.current) {
-      chart = echarts.init(chartRef.current, 'light', {
-        renderer: 'svg',
-        width: SCREEN_WIDTH,
-        height: E_HEIGHT,
+// HTML(EChart)
+const getChartHtml = (option: any) => `
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+      body, html, #main { 
+        height: 100%; 
+        width: 100%; 
+        margin: 0; 
+        padding: 0; 
+        overflow: hidden; 
+        background-color: white;
+      }
+    </style>
+    <script src="https://fastly.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  </head>
+  <body>
+    <div id="main"></div>
+    <script>
+      var myChart = echarts.init(document.getElementById('main'));
+      // 接收来自 React Native 的 Option
+      function setChartOption(option) {
+        myChart.setOption(option);
+      }
+      
+      // 初始化
+      setChartOption(${JSON.stringify(option)});
+
+      // 响应窗口大小变化
+      window.addEventListener('resize', function() {
+        myChart.resize();
       });
-      chart.setOption(option);
-    }
-    return () => chart?.dispose();
+
+      myChart.on('click', function(params) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'click',
+          data: params.name
+        }));
+      });
+
+      // 禁用ScrollView
+      var container = document.getElementById('main');
+      // 禁用
+      container.addEventListener('touchstart', function() {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'gesture', active: true }));
+      }, { passive: true });
+      // 恢复
+      function endGesture() {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'gesture', active: false }));
+      }
+      container.addEventListener('touchend', endGesture);
+      container.addEventListener('touchcancel', endGesture);
+    </script>
+  </body>
+</html>
+`;
+
+// EChart(WebView)
+function WebViewChart({ option, onGesture }: { option: any, onGesture: (isBusy: boolean) => void }) {
+  const webViewRef = useRef<WebView>(null);
+
+  // on option change
+  useEffect(() => {
+    const script = `setChartOption(${JSON.stringify(option)})`;
+    webViewRef.current?.injectJavaScript(script);
   }, [option]);
+
   return (
-    <SvgChart 
-      ref={chartRef}
-      style={{ width: SCREEN_WIDTH, height: E_HEIGHT }}
-    />);
+    <View style={ styles.webview }>
+      <WebView
+        ref={webViewRef}
+        originWhitelist={['*']}
+        source={{ html: getChartHtml(option) }}
+        style={{ backgroundColor: 'transparent' }}
+        scrollEnabled={false}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        onMessage={(event) => {
+          const data = JSON.parse(event.nativeEvent.data);
+          if (data.type === 'gesture') {
+            onGesture(data.active); // 禁用ScrollView
+          }
+        }}
+      />
+    </View>
+  );
 }
 
-// page
 export default function Detail() {
-  const { imageUri } = useLocalSearchParams<{
-    imageUri?: string;
-  }>();
+  const { imageUri } = useLocalSearchParams<{ imageUri?: string }>();
   const [imageHeight, setImageHeight] = useState<number>(1);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+
   if (!imageUri) {
     return <ThemedText>错误 - 无图片</ThemedText>;
   }
 
-  // 测试用数据
-  /*
-  const nodes = []; // ...
-  const links = []; // ...
-  const categories = []; // ...
-  */
-  const nodes = [{"id": "file2_node0", "name": "劉永濟", "type": "person", "category": "立約人", "symbolSize": 40, "itemStyle": {"color": "#5470c6", "borderColor": "#fff", "borderWidth": 2, "shadowBlur": 10, "shadowColor": "rgba(0, 0, 0, 0.3)"}}, {"id": "file2_node1", "name": "白田四形", "type": "object", "category": "标的", "symbolSize": 35, "itemStyle": {"color": "#91cc75", "borderColor": "#fff", "borderWidth": 2, "shadowBlur": 10, "shadowColor": "rgba(0, 0, 0, 0.3)"}}];
-  const links = [{"source": "file2_node0", "target": "file2_node1", "value": "出让", "lineStyle": {"color": "#ff0000", "width": 2}}];
-  const categories = [{"name": "立約人"}, {"name": "标的"}];
+  // 测试数据
+  const nodes = [
+    { id: "file2_node0", name: "劉永濟", type: "person", category: "立約人", symbolSize: 40 },
+    { id: "file2_node1", name: "白田四形", type: "object", category: "标的", symbolSize: 35 }
+  ];
+  const links = [
+    { source: "file2_node0", target: "file2_node1", value: "出让" }
+  ];
+  const categories = [{ name: "立約人" }, { name: "标的" }];
+
   const option = {
     title: {
-        text: '图谱',
-        subtext: `共 ${nodes.length} 个节点, ${links.length} 条关系`,
-        left: 'center',
-        top: 10,
-        textStyle: {
-            fontSize: 24,
-            fontWeight: 'bold',
-            color: '#2c3e50'
-        },
-        subtextStyle: {
-            fontSize: 14,
-            color: '#7f8c8d'
-        }
+      subtext: `节点: ${nodes.length} / 关系: ${links.length}`,
+      left: 'right',
     },
-    tooltip: {
-        trigger: 'item',
-        formatter: function(params) {
-            if (params.dataType === 'node') {
-                return `<b>${params.data.name}</b><br/>` +
-                        `类型: ${params.data.type || '未知'}<br/>` +
-                        `角色: ${params.data.category || '未知'}`;
-            } else if (params.dataType === 'edge') {
-                return `关系: ${params.data.value || '未知'}`;
-            }
-        }
-    },
+    tooltip: { trigger: 'item' },
     legend: {
-        data: categories.map(cat => cat.name),
-        orient: 'vertical',
-        right: 10,
-        top: 60,
-        textStyle: {
-            fontSize: 12
-        }
+      data: categories.map(cat => cat.name),
+      bottom: 10,
     },
     series: [{
-        type: 'graph',
-        layout: 'force',
-        data: nodes,
-        links: links,
-        categories: categories,
-        force: {
-            repulsion: 200,
-            gravity: 0.1,
-            edgeLength: 150,
-            layoutAnimation: true
-        },
-        roam: true,
-        draggable: true,
-        focusNodeAdjacency: true,
-        symbolSize: 40,
-        edgeSymbol: ['none', 'arrow'],
-        edgeSymbolSize: [4, 10],
-        label: {
-            show: true,
-            position: 'right',
-            fontSize: 14,
-            fontWeight: 'bold',
-            color: '#2c3e50'
-        },
-        edgeLabel: {
-            show: true,
-            fontSize: 12,
-            formatter: '{c}'
-        },
-        lineStyle: {
-            color: 'source',
-            curveness: 0.3,
-            width: 2,
-            opacity: 0.8
-        },
-        emphasis: {
-            focus: 'adjacency',
-            lineStyle: {
-                width: 4
-            }
-        }
-    }]
+      type: 'graph',
+      layout: 'force',
+      data: nodes,
+      links: links,
+      categories: categories,
+      force: {
+        repulsion: 300,
+        edgeLength: 120,
+      },
+      roam: true,
+      label: { show: true, position: 'top' },
+      edgeLabel: { show: true, formatter: '{c}' },
+      lineStyle: { color: 'source', curveness: 0.2, width: 2 },
+    }],
+    force: {
+      repulsion: 150,      // 斥力
+      gravity: 0.2,        // 引力
+      edgeLength: 200,     // 边长
+      friction: 0.4,       // 摩擦力
+      layoutAnimation: true
+    },
   };
-        
 
+  // page
   return (
     <ScrollView
       style={{ flex: 1 }}
       contentContainerStyle={styles.container}
-    >
-      {/* 图片 */}
+      scrollEnabled={scrollEnabled}
+      >
       <Image
         source={{ uri: imageUri }}
-        style={[
-          styles.image,
-          imageHeight ? {height: imageHeight} : undefined,
-        ]}
+        style={[styles.image, { height: imageHeight }]}
         contentFit="contain"
-        onLoad={(event)=>{
+        onLoad={(event) => {
           const { width, height } = event.source;
-          const scale = SCREEN_WIDTH / width;
-          setImageHeight(height * scale);
+          setImageHeight(height * (SCREEN_WIDTH / width));
         }}
       />
 
-      {/* 文本 */}
-      <ThemedView style={styles.textSection}>
-        <Collapsible title="识别结果" initial_open={true}>
-          <ThemedText>
-            OCR识别得到的文本内容
-            {"\n"}
-          </ThemedText>
-        </Collapsible>
+      <ThemedView style={styles.section}>
+        <ThemedText type="defaultSemiBold" style={styles.head}>识别结果</ThemedText>
+        <ThemedText>OCR 识别得到的文本内容</ThemedText>
       </ThemedView>
 
-      {/* 图谱 */}
-      <ThemedView style={styles.chartSection}>
-        <Collapsible title="图谱" initial_open={true}>
-          <ChartComponent option={option} />
-        </Collapsible>
+      <ThemedView style={styles.section}>
+        <ThemedText type="defaultSemiBold" style={styles.head}>图谱</ThemedText>
+        <WebViewChart option={option} onGesture={(active: any) => setScrollEnabled(!active)} />
       </ThemedView>
     </ScrollView>
   );
 }
 
-// style
 const styles = StyleSheet.create({
-  container: {
-    paddingBottom: 24,
+  container: { paddingBottom: 40 },
+  image: { width: SCREEN_WIDTH },
+  section: { padding: 16 },
+  head: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginVertical:12
   },
-
-  image: {
-    width: SCREEN_WIDTH,
-    backgroundColor: "transparent",
-  },
-
-  textSection: {
-    padding: 16,
-  },
-
-  chartSection: {
-    padding: 16,
-  },
-
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-
-  chartPlaceholder: {
-    height: 260,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: "gray",
-    alignItems: "center",
-    justifyContent: "center",
-    opacity: 0.6,
+  webview: {
+    width: SCREEN_WIDTH - 32,
+    height: E_HEIGHT,
+    borderRadius: 16,        // 设置圆角半径
+    overflow: 'hidden',     // 强制裁剪超出部分的 WebView 内容
   },
 });
