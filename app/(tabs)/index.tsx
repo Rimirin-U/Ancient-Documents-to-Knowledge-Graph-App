@@ -2,7 +2,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 
 import * as ImagePicker from 'expo-image-picker';
-import { Pressable } from "react-native";
+import { Pressable, Platform } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useThemeColor } from "@/hooks/use-theme-color";
@@ -37,15 +37,44 @@ export default function Index() {
     return mimeTypes[ext || ''] || 'image/jpeg';
   };
 
+  // uri blob -> file
+  const blobUriToFile = async (blobUri: string, fileName: string): Promise<File | null> => {
+    if (Platform.OS !== 'web') return null;
+    
+    try {
+      const response = await fetch(blobUri);
+      const blob = await response.blob();
+      return new File([blob], fileName, { type: blob.type });
+    } catch (error) {
+      console.error('Error converting blob to file:', error);
+      return null;
+    }
+  };
+
   // 上传图片
   const uploadImage = async (uri: string, fileName: string) => {
     const mimeType = getMimeType(fileName);
     const formData = new FormData();
-    formData.append('image', {
-      uri: uri,
-      type: mimeType,
-      name: fileName,
-    } as any);
+
+    // web: blob -> file
+    if (Platform.OS === 'web' && uri.startsWith('blob:')) {
+      const file = await blobUriToFile(uri, fileName);
+      if (file) {
+        formData.append('image', file);
+      } else {
+        Alert.alert('转换失败', '请重试');
+        return;
+      }
+    } else {
+      // native
+      formData.append('image', {
+        uri: uri,
+        type: mimeType,
+        name: fileName,
+      } as any);
+    }
+
+    console.log("LOG uri:", uri);
 
     try {
       const response = await fetch('http://192.168.3.41:3000/api/upload', {
