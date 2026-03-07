@@ -77,7 +77,8 @@ export default function Index() {
     console.log("LOG uri:", uri);
 
     try {
-      const response = await fetch('http://10.138.190.210:3000/api/upload', {
+      console.log("LOG: Sending request to http://10.125.255.79:3000/api/upload");
+      const response = await fetch('http://10.125.255.79:3000/api/upload', {
         method: 'POST',
         body: formData,
       });

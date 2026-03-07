@@ -26,7 +26,7 @@ export default function Detail() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://10.138.190.210:3000/api/analysis/${analysisId}`);
+      const response = await fetch(`http://10.125.255.79:3000/api/analysis/${analysisId}`);
       if (!response.ok) {
         throw new Error('获取数据失败');
       }
