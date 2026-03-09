@@ -1,6 +1,7 @@
 import { Chart } from "@/components/echarts/echarts";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { getAnalysis } from "@/services/analysis";
 import { Image } from "expo-image";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -26,11 +27,7 @@ export default function Detail() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://192.168.3.41:3000/api/analysis/${analysisId}`);
-      if (!response.ok) {
-        throw new Error('获取数据失败');
-      }
-      const result = await response.json();
+      const result = await getAnalysis(analysisId!);
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : '未知错误');

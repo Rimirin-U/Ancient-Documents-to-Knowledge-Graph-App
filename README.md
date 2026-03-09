@@ -1,4 +1,4 @@
-## 依赖
+## 环境
 
 ```bash
 npm install
