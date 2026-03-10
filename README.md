@@ -12,11 +12,15 @@ npm install
 npx expo start
 ```
 
-启动后，可通过 Expo Go App 扫描二维码在真机上预览，或按 `w` 在浏览器中打开、按 `a` 打开 Android 模拟器，按 `i` 打开 iOS 模拟器。
+在`services/api.ts`中更改API基础URL。
+
+通过Expo Go App扫描二维码在真机上预览。
+
+**暂不支持web** 按 `w` 在浏览器中打开。
 
 ## ECharts相关
 
-图表组件位于 `components/echarts/`，对外暴露统一的 `<Chart>` 组件，平台自动适配：移动端（Native）基于 `WebView` 渲染，Web 端基于 `iframe` 渲染。
+图表组件位于 `components/echarts/`，对外暴露统一的 `<Chart>` 组件，平台自动适配：移动端（Native）基于 `WebView` 渲染，Web端基于 `iframe` 渲染。
 
 ### 组件 Props
 

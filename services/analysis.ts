@@ -1,6 +1,18 @@
+// services/analysis.ts
+// 图像分析相关 API 调用
 import { Platform } from 'react-native';
+import { getToken } from './auth';
+import { API_BASE_URL } from './api';
 
-export const API_BASE_URL = 'http://192.168.3.41:3000';
+// 获取带有认证信息的请求头
+async function authHeaders(): Promise<Record<string, string>> {
+  const token = await getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+
+// API 待修改
+
 
 const getMimeType = (fileName: string): string => {
   const ext = fileName.toLowerCase().split('.').pop();
@@ -30,8 +42,10 @@ export async function uploadImage(uri: string, fileName: string): Promise<{ anal
     } as any);
   }
 
+  const headers = await authHeaders();
   const response = await fetch(`${API_BASE_URL}/api/upload`, {
     method: 'POST',
+    headers,
     body: formData,
   });
   const result = await response.json();
@@ -42,7 +56,8 @@ export async function uploadImage(uri: string, fileName: string): Promise<{ anal
 }
 
 export async function getAnalysis(analysisId: string): Promise<any> {
-  const response = await fetch(`${API_BASE_URL}/api/analysis/${analysisId}`);
+  const headers = await authHeaders();
+  const response = await fetch(`${API_BASE_URL}/api/analysis/${analysisId}`, { headers });
   if (!response.ok) {
     throw new Error('获取数据失败');
   }
