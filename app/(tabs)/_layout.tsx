@@ -22,8 +22,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: '历史',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="info.bubble.fill" color={color} />
+          title: '记录',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="clock.fill" color={color} />
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: '个人',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />
         }}
       />
       {/*

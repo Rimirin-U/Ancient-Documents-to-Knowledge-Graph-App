@@ -43,6 +43,7 @@ export default function RootLayout() {
             <Stack.Screen name="detail" options={{ headerShown: true, title: '结果' }} />
             <Stack.Screen name="login" options={{ headerShown: false }} />
             <Stack.Screen name="register" options={{ headerShown: true, title: '注册' }} />
+            <Stack.Screen name="edit-profile" options={{ headerShown: true, title: '修改个人信息' }} />
           </Stack>
         </RouteGuard>
         <StatusBar style="auto" />

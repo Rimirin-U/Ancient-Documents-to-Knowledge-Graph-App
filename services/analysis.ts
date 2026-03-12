@@ -1,17 +1,9 @@
 // services/analysis.ts
 // 图像分析相关 API 调用
 import { Platform } from 'react-native';
-import { getToken } from './auth';
-import { API_BASE_URL } from './api';
-
-// 获取带有认证信息的请求头
-async function authHeaders(): Promise<Record<string, string>> {
-  const token = await getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+import { API_BASE_URL, authHeaders } from './api';
 
 
-// API 待修改
 
 
 const getMimeType = (fileName: string): string => {
