@@ -11,7 +11,7 @@ export default function Index() {
       }}
     >
       <ThemedText>
-        HISTORY
+        RECORD
       </ThemedText>
     </ThemedView>
   );

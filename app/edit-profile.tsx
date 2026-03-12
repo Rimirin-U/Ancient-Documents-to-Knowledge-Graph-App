@@ -104,7 +104,7 @@ export default function EditProfileScreen() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            placeholder="留空表示不修改"
+            placeholder="留空即不修改"
             placeholderTextColor={colors.icon}
           />
 

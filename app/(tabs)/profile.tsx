@@ -63,12 +63,9 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedView style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <ThemedText style={styles.headerTitle}>个人信息</ThemedText>
-      </ThemedView>
       <ScrollView contentContainerStyle={styles.content}>
         {userInfo && (
-          <View style={styles.card}>
+          <ThemedView style={styles.container}>
             <InfoRow label="用户名" value={userInfo.username} colors={colors} />
             <InfoRow label="邮箱" value={userInfo.email} colors={colors} />
             <InfoRow
@@ -76,7 +73,7 @@ export default function ProfileScreen() {
               value={new Date(userInfo.created_at).toLocaleDateString('zh-CN')}
               colors={colors}
             />
-          </View>
+          </ThemedView>
         )}
 
         <View style={styles.actions}>
@@ -119,11 +116,6 @@ function InfoRow({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: {
-    paddingBottom: 16,
-    paddingHorizontal: 24,
-    alignItems: 'left',
-  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',

@@ -20,9 +20,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="history"
+        name="record"
         options={{
           title: '记录',
+          headerShown: true,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="clock.fill" color={color} />
         }}
       />
@@ -30,6 +31,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: '个人',
+          headerShown: true,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />
         }}
       />
