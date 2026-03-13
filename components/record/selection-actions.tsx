@@ -4,9 +4,10 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 type SelectionActionsProps = {
   onCancel: () => void;
-  onAnalyze: () => void;
+  onAnalyze?: () => void;
   onDelete: () => void;
   disabled?: boolean;
+  showAnalyze?: boolean;
 };
 
 export function SelectionActions({
@@ -14,11 +15,14 @@ export function SelectionActions({
   onAnalyze,
   onDelete,
   disabled,
+  showAnalyze = true,
 }: SelectionActionsProps) {
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
       <ActionButton label="取消" kind="cancel" onPress={onCancel} />
-      <ActionButton label="分析" kind="primary" onPress={onAnalyze} disabled={disabled} />
+      {showAnalyze && onAnalyze ? (
+        <ActionButton label="分析" kind="primary" onPress={onAnalyze} disabled={disabled} />
+      ) : null}
       <ActionButton label="删除" kind="danger" onPress={onDelete} disabled={disabled} />
     </View>
   );

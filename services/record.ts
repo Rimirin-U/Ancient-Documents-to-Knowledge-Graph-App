@@ -8,6 +8,14 @@ export type RecordImageItem = {
   thumbnailDataUrl?: string;
 };
 
+export type CrossDocRecordItem = {
+  id: number;
+  title: string;
+  filename: string;
+  uploadTime: string;
+  previewThumbnailDataUrls: string[];
+};
+
 type PagedIdsResponse = {
   success: boolean;
   data: {
@@ -26,6 +34,36 @@ type ImageInfoResponse = {
     filename: string;
     upload_time: string;
     title: string;
+  };
+  detail?: string;
+};
+
+type MultiTaskDetailResponse = {
+  success: boolean;
+  data: {
+    id: number;
+    user_id: number;
+    status: string;
+    structured_result_ids: number[];
+    created_at: string;
+  };
+  detail?: string;
+};
+
+type StructuredResultResponse = {
+  success: boolean;
+  data: {
+    id: number;
+    ocr_result_id: number;
+  };
+  detail?: string;
+};
+
+type OcrResultResponse = {
+  success: boolean;
+  data: {
+    id: number;
+    image_id: number;
   };
   detail?: string;
 };
@@ -58,6 +96,45 @@ export async function getImageRecordList(params?: {
         uploadTime: info.upload_time,
         thumbnailDataUrl: await getImageThumbnailDataUrl(id),
       } satisfies RecordImageItem;
+    })
+  );
+
+  return items;
+}
+
+export async function getCrossDocRecordList(params?: {
+  skip?: number;
+  limit?: number;
+}): Promise<CrossDocRecordItem[]> {
+  const skip = params?.skip ?? 0;
+  const limit = params?.limit ?? 50;
+  const headers = await authHeaders();
+
+  const listResponse = await fetch(
+    `${API_BASE_URL}/api/v1/users/multi-tasks?skip=${skip}&limit=${limit}`,
+    { headers }
+  );
+  const listResult = (await listResponse.json()) as PagedIdsResponse;
+
+  if (!listResponse.ok || !listResult.success) {
+    throw new Error(listResult.detail || '获取跨文档记录失败');
+  }
+
+  const items = await Promise.all(
+    listResult.data.ids.map(async (id) => {
+      const detail = await getMultiTaskDetail(id);
+      const imageIds = await getPreviewImageIdsFromStructuredResults(detail.structured_result_ids);
+      const previewThumbnailDataUrls = (
+        await Promise.all(imageIds.map((imageId) => getImageThumbnailDataUrl(imageId)))
+      ).filter((url) => Boolean(url));
+
+      return {
+        id,
+        title: `跨文档任务 ${id}`,
+        filename: `${detail.structured_result_ids.length} 个文档`,
+        uploadTime: detail.created_at,
+        previewThumbnailDataUrls,
+      } satisfies CrossDocRecordItem;
     })
   );
 
@@ -157,6 +234,77 @@ async function getImageThumbnailDataUrl(imageId: number): Promise<string> {
   } catch (error) {
     console.warn(`获取缩略图 ${imageId} 失败`, error);
     return '';
+  }
+}
+
+async function getMultiTaskDetail(taskId: number): Promise<MultiTaskDetailResponse['data']> {
+  const headers = await authHeaders();
+  const response = await fetch(`${API_BASE_URL}/api/v1/multi-tasks/${taskId}`, {
+    headers,
+  });
+  const result = (await response.json()) as MultiTaskDetailResponse;
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.detail || `获取跨文档任务 ${taskId} 失败`);
+  }
+
+  return result.data;
+}
+
+async function getPreviewImageIdsFromStructuredResults(structuredResultIds: number[]): Promise<number[]> {
+  const limitedIds = structuredResultIds.slice(0, 3);
+  const imageIds = await Promise.all(
+    limitedIds.map(async (structuredResultId) => {
+      const structuredResult = await getStructuredResult(structuredResultId);
+      const ocrResult = await getOcrResult(structuredResult.ocr_result_id);
+      return ocrResult.image_id;
+    })
+  );
+
+  return Array.from(new Set(imageIds)).slice(0, 3);
+}
+
+async function getStructuredResult(
+  structuredResultId: number
+): Promise<StructuredResultResponse['data']> {
+  const headers = await authHeaders();
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/structured-results/${structuredResultId}`,
+    { headers }
+  );
+  const result = (await response.json()) as StructuredResultResponse;
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.detail || `获取结构化结果 ${structuredResultId} 失败`);
+  }
+
+  return result.data;
+}
+
+async function getOcrResult(ocrResultId: number): Promise<OcrResultResponse['data']> {
+  const headers = await authHeaders();
+  const response = await fetch(`${API_BASE_URL}/api/v1/ocr-results/${ocrResultId}`, {
+    headers,
+  });
+  const result = (await response.json()) as OcrResultResponse;
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.detail || `获取OCR结果 ${ocrResultId} 失败`);
+  }
+
+  return result.data;
+}
+
+export async function deleteCrossDocTask(taskId: number): Promise<void> {
+  const headers = await authHeaders();
+  const response = await fetch(`${API_BASE_URL}/api/v1/multi-tasks/${taskId}`, {
+    method: 'DELETE',
+    headers,
+  });
+  const result = (await response.json()) as { success?: boolean; detail?: string };
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.detail || `删除跨文档任务 ${taskId} 失败`);
   }
 }
 

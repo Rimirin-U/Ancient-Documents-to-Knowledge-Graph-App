@@ -1,3 +1,4 @@
+import { CrossDocCard } from '@/components/record/cross-doc-card';
 import { FloatingViewSwitch } from '@/components/record/floating-view-switch';
 import { RecordCard } from '@/components/record/record-card';
 import { SelectionActions } from '@/components/record/selection-actions';
@@ -6,7 +7,10 @@ import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import {
   createCrossDocTaskFromImages,
+  CrossDocRecordItem,
+  deleteCrossDocTask,
   deleteImageRecord,
+  getCrossDocRecordList,
   getImageRecordList,
   RecordImageItem,
 } from '@/services/record';
@@ -40,6 +44,7 @@ export default function RecordScreen() {
   const menuBorder = useThemeColor({ light: '#d7dae0', dark: '#3a414c' }, 'icon');
 
   const [records, setRecords] = useState<RecordImageItem[]>([]);
+  const [crossDocRecords, setCrossDocRecords] = useState<CrossDocRecordItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -55,7 +60,7 @@ export default function RecordScreen() {
   const selectedCount = selectedIds.length;
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
-  const fetchRecords = useCallback(async (isRefresh?: boolean) => {
+  const fetchImageRecords = useCallback(async (isRefresh?: boolean) => {
     if (isRefresh) {
       setRefreshing(true);
     } else {
@@ -78,11 +83,38 @@ export default function RecordScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchRecords();
-  }, [fetchRecords]);
+  const fetchCrossDocRecords = useCallback(async (isRefresh?: boolean) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    setErrorMessage('');
 
-  function openHeaderMenu() {
+    try {
+      const list = await getCrossDocRecordList({ limit: 50 });
+      setCrossDocRecords(list);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '加载跨文档记录失败';
+      setErrorMessage(message);
+    } finally {
+      if (isRefresh) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (currentView === 'image') {
+      fetchImageRecords();
+      return;
+    }
+    fetchCrossDocRecords();
+  }, [currentView, fetchImageRecords, fetchCrossDocRecords]);
+
+  const openHeaderMenu = useCallback(() => {
     if (headerMenuVisible) return;
     setHeaderMenuVisible(true);
     menuOpacity.setValue(0);
@@ -92,7 +124,7 @@ export default function RecordScreen() {
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start();
-  }
+  }, [headerMenuVisible, menuOpacity]);
 
   const closeHeaderMenu = useCallback(() => {
     Animated.timing(menuOpacity, {
@@ -110,16 +142,13 @@ export default function RecordScreen() {
   useLayoutEffect(() => {
     navigation.setOptions({
       title: '记录',
-      headerRight:
-        currentView === 'image'
-          ? () => (
-              <Pressable onPress={openHeaderMenu} hitSlop={10} style={styles.headerMenuButton}>
-                <MaterialIcons name="menu" size={26} color={textColor} />
-              </Pressable>
-            )
-          : undefined,
+      headerRight: () => (
+        <Pressable onPress={openHeaderMenu} hitSlop={10} style={styles.headerMenuButton}>
+          <MaterialIcons name="menu" size={26} color={textColor} />
+        </Pressable>
+      ),
     });
-  }, [navigation, textColor, currentView]);
+  }, [navigation, textColor, currentView, openHeaderMenu]);
 
   function setSelectModeWithReset(next: boolean) {
     setSelectMode(next);
@@ -150,6 +179,9 @@ export default function RecordScreen() {
       await createCrossDocTaskFromImages(selectedIds);
       Alert.alert('跨文档分析', '跨文档任务已创建并提交分析');
       setSelectModeWithReset(false);
+      if (currentView === 'cross-doc') {
+        await fetchCrossDocRecords(true);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : '跨文档分析提交失败';
       Alert.alert('跨文档分析', message);
@@ -160,6 +192,35 @@ export default function RecordScreen() {
 
   function handleBatchDelete() {
     if (!selectedCount) return;
+
+    if (currentView === 'cross-doc') {
+      Alert.alert('删除提示', '确定要删除吗？', [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: async () => {
+            setBatchLoading(true);
+            try {
+              const results = await Promise.allSettled(selectedIds.map((id) => deleteCrossDocTask(id)));
+              const successCount = results.filter((item) => item.status === 'fulfilled').length;
+              const failCount = results.length - successCount;
+
+              if (successCount) {
+                await fetchCrossDocRecords(true);
+                setSelectModeWithReset(false);
+              }
+
+              Alert.alert('删除结果', `已删除 ${successCount} 项${failCount ? `，失败 ${failCount} 项` : ''}`);
+            } finally {
+              setBatchLoading(false);
+            }
+          },
+        },
+      ]);
+      return;
+    }
+
     Alert.alert('删除提示', '确定要删除吗？', [
       { text: '取消', style: 'cancel' },
       {
@@ -173,7 +234,7 @@ export default function RecordScreen() {
             const failCount = results.length - successCount;
 
             if (successCount) {
-              await fetchRecords(true);
+              await fetchImageRecords(true);
               setSelectModeWithReset(false);
             }
 
@@ -189,12 +250,10 @@ export default function RecordScreen() {
   function handleViewSelect(view: 'image' | 'cross-doc') {
     setViewSwitchOpen(false);
     setCurrentView(view);
-    if (view === 'cross-doc') {
-      setSelectModeWithReset(false);
-    }
+    setSelectModeWithReset(false);
   }
 
-  function renderList() {
+  function renderImageList() {
     if (loading) {
       return (
         <View style={styles.centered}>
@@ -207,7 +266,7 @@ export default function RecordScreen() {
       return (
         <View style={styles.centered}>
           <ThemedText style={styles.errorText}>{errorMessage}</ThemedText>
-          <Pressable style={styles.retryButton} onPress={() => fetchRecords()}>
+          <Pressable style={styles.retryButton} onPress={() => fetchImageRecords()}>
             <ThemedText style={styles.retryButtonText}>重试</ThemedText>
           </Pressable>
         </View>
@@ -235,7 +294,56 @@ export default function RecordScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => fetchRecords(true)}
+            onRefresh={() => fetchImageRecords(true)}
+            tintColor={textColor}
+          />
+        }
+      />
+    );
+  }
+
+  function renderCrossDocList() {
+    if (loading) {
+      return (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={textColor} />
+        </View>
+      );
+    }
+
+    if (errorMessage) {
+      return (
+        <View style={styles.centered}>
+          <ThemedText style={styles.errorText}>{errorMessage}</ThemedText>
+          <Pressable style={styles.retryButton} onPress={() => fetchCrossDocRecords()}>
+            <ThemedText style={styles.retryButtonText}>重试</ThemedText>
+          </Pressable>
+        </View>
+      );
+    }
+
+    return (
+      <FlatList
+        data={crossDocRecords}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={styles.listContent}
+        renderItem={({ item }) => (
+          <CrossDocCard
+            item={item}
+            selectable={selectMode}
+            selected={selectedSet.has(item.id)}
+            onToggleSelect={toggleSelect}
+          />
+        )}
+        ListEmptyComponent={
+          <View style={styles.emptyWrap}>
+            <ThemedText style={{ color: subtleColor }}>暂无跨文档记录</ThemedText>
+          </View>
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchCrossDocRecords(true)}
             tintColor={textColor}
           />
         }
@@ -245,7 +353,7 @@ export default function RecordScreen() {
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: pageBg }]}>
-      {currentView === 'image' ? renderList() : <CrossDocPlaceholder subtleColor={subtleColor} />}
+      {currentView === 'image' ? renderImageList() : renderCrossDocList()}
 
       {!selectMode ? (
         <FloatingViewSwitch
@@ -262,11 +370,12 @@ export default function RecordScreen() {
           onAnalyze={handleBatchAnalyze}
           onDelete={handleBatchDelete}
           disabled={!selectedCount || batchLoading}
+          showAnalyze={currentView === 'image'}
         />
       ) : null}
 
       <Modal
-        visible={headerMenuVisible && currentView === 'image'}
+        visible={headerMenuVisible}
         transparent
         animationType="none"
         onRequestClose={closeHeaderMenu}
@@ -355,11 +464,3 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
 });
-
-function CrossDocPlaceholder({ subtleColor }: { subtleColor: string }) {
-  return (
-    <View style={styles.centered}>
-      <ThemedText style={{ color: subtleColor }}>分析</ThemedText>
-    </View>
-  );
-}

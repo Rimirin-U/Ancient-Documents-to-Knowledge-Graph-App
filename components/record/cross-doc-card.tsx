@@ -1,40 +1,30 @@
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { RecordImageItem } from '@/services/record';
+import { CrossDocRecordItem } from '@/services/record';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { memo, useMemo, useState } from 'react';
-import {
-  Image,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { memo, useMemo } from 'react';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 
-type RecordCardProps = {
-  item: RecordImageItem;
+type CrossDocCardProps = {
+  item: CrossDocRecordItem;
   selectable: boolean;
   selected: boolean;
   onToggleSelect: (id: number) => void;
-  onPress?: (item: RecordImageItem) => void;
+  onPress?: (item: CrossDocRecordItem) => void;
 };
 
-function RecordCardBase({
+function CrossDocCardBase({
   item,
   selectable,
   selected,
   onToggleSelect,
   onPress,
-}: RecordCardProps) {
-  const cardBg = useThemeColor(
-    { light: '#f7f7f8', dark: '#1f2226' },
-    'background'
-  );
+}: CrossDocCardProps) {
+  const cardBg = useThemeColor({ light: '#f7f7f8', dark: '#1f2226' }, 'background');
   const muted = useThemeColor({ light: '#5f6368', dark: '#a9b1ba' }, 'icon');
   const outline = useThemeColor({ light: '#d9dce1', dark: '#383d44' }, 'icon');
   const checkboxBg = useThemeColor({ light: '#ffffff', dark: '#0f1115' }, 'background');
   const thumbnailBg = useThemeColor({ light: '#eceef1', dark: '#161a20' }, 'background');
-
-  const [imageFailed, setImageFailed] = useState(false);
 
   const uploadText = useMemo(() => {
     const date = new Date(item.uploadTime);
@@ -48,10 +38,6 @@ function RecordCardBase({
     });
   }, [item.uploadTime]);
 
-  const imageSource = item.thumbnailDataUrl
-    ? { uri: item.thumbnailDataUrl }
-    : undefined;
-
   function handlePress() {
     if (selectable) {
       onToggleSelect(item.id);
@@ -60,35 +46,38 @@ function RecordCardBase({
     onPress?.(item);
   }
 
+  const previews = item.previewThumbnailDataUrls.slice(0, 3);
+
   return (
-    <Pressable
-      style={[styles.container, { backgroundColor: cardBg }]}
-      onPress={handlePress}
-    >
+    <Pressable style={[styles.container, { backgroundColor: cardBg }]} onPress={handlePress}>
       {selectable ? (
-        <Pressable
-          hitSlop={8}
-          onPress={() => onToggleSelect(item.id)}
-          style={styles.checkboxWrap}
-        >
+        <Pressable hitSlop={8} onPress={() => onToggleSelect(item.id)} style={styles.checkboxWrap}>
           <View style={[styles.checkbox, { borderColor: outline, backgroundColor: checkboxBg }]}>
-            {selected ? (
-              <MaterialIcons name="check" size={16} color="#1f6feb" />
-            ) : null}
+            {selected ? <MaterialIcons name="check" size={16} color="#1f6feb" /> : null}
           </View>
         </Pressable>
       ) : null}
 
-      <View style={[styles.thumbnail, { borderColor: outline, backgroundColor: thumbnailBg }]}> 
-        {!imageFailed && imageSource ? (
-          <Image
-            source={imageSource}
-            resizeMode="cover"
-            style={styles.image}
-            onError={() => setImageFailed(true)}
-          />
+      <View style={styles.stackWrap}>
+        {previews.length ? (
+          previews.map((url, index) => (
+            <View
+              key={`${item.id}-${index}`}
+              style={[
+                styles.stackItem,
+                {
+                  borderColor: outline,
+                  backgroundColor: thumbnailBg,
+                  left: index * 12,
+                  zIndex: previews.length - index,
+                },
+              ]}
+            >
+              <Image source={{ uri: url }} resizeMode="cover" style={styles.image} />
+            </View>
+          ))
         ) : (
-          <View style={styles.fallback}>
+          <View style={[styles.stackItem, styles.singleFallback, { borderColor: outline, backgroundColor: thumbnailBg }]}>
             <ThemedText>缩略图</ThemedText>
           </View>
         )}
@@ -107,7 +96,7 @@ function RecordCardBase({
   );
 }
 
-export const RecordCard = memo(RecordCardBase);
+export const CrossDocCard = memo(CrossDocCardBase);
 
 const styles = StyleSheet.create({
   container: {
@@ -134,40 +123,45 @@ const styles = StyleSheet.create({
     borderWidth: 1.4,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
   },
-  thumbnail: {
-    width: 96,
+  stackWrap: {
+    width: 120,
+    height: 96,
+    position: 'relative',
+  },
+  stackItem: {
+    width: 84,
     height: 96,
     borderRadius: 10,
     overflow: 'hidden',
     borderWidth: 1,
-    backgroundColor: '#eceef1',
+    position: 'absolute',
+    top: 0,
+  },
+  singleFallback: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    left: 0,
   },
   image: {
     width: '100%',
     height: '100%',
-  },
-  fallback: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   meta: {
     flex: 1,
     gap: 3,
   },
   title: {
-    fontSize: 28 / 2,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 21,
   },
   fileName: {
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 18,
   },
   time: {
-    marginTop: 16,
+    marginTop: 10,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 18,
   },
 });
