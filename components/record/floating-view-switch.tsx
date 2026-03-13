@@ -1,0 +1,123 @@
+import { ThemedText } from '@/components/themed-text';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { StyleSheet, Pressable, View } from 'react-native';
+
+type ViewType = 'image' | 'cross-doc';
+
+type FloatingViewSwitchProps = {
+  currentView: ViewType;
+  open: boolean;
+  onToggleOpen: () => void;
+  onSelectView: (view: ViewType) => void;
+};
+
+const viewLabelMap: Record<ViewType, string> = {
+  image: '图片',
+  'cross-doc': '跨文档',
+};
+
+export function FloatingViewSwitch({
+  currentView,
+  open,
+  onToggleOpen,
+  onSelectView,
+}: FloatingViewSwitchProps) {
+  const panelBg = useThemeColor({ light: '#f3f4f6', dark: '#22272f' }, 'background');
+  const panelBorder = useThemeColor({ light: '#d7dae0', dark: '#3a414c' }, 'icon');
+  const arrowColor = useThemeColor({ light: '#616976', dark: '#a1a9b5' }, 'icon');
+
+  return (
+    <View style={styles.wrapper} pointerEvents="box-none">
+      {open ? (
+        <View style={[styles.panel, { backgroundColor: panelBg, borderColor: panelBorder }]}>
+          <SwitchRow
+            label="图片"
+            active={currentView === 'image'}
+            onPress={() => onSelectView('image')}
+          />
+          <SwitchRow
+            label="跨文档"
+            active={currentView === 'cross-doc'}
+            onPress={() => onSelectView('cross-doc')}
+          />
+        </View>
+      ) : null}
+
+      <Pressable
+        style={[styles.trigger, { backgroundColor: panelBg, borderColor: panelBorder }]}
+        onPress={onToggleOpen}
+      >
+        <ThemedText style={styles.triggerText}>{viewLabelMap[currentView]}</ThemedText>
+        <MaterialIcons
+          name={open ? 'keyboard-arrow-down' : 'keyboard-arrow-up'}
+          size={18}
+          color={arrowColor}
+        />
+      </Pressable>
+    </View>
+  );
+}
+
+function SwitchRow({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={styles.optionRow} onPress={onPress}>
+      <ThemedText style={[styles.optionText, active ? styles.activeText : null]}>
+        {label}
+      </ThemedText>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrapper: {
+    position: 'absolute',
+    right: 16,
+    bottom: 18,
+    alignItems: 'flex-end',
+  },
+  panel: {
+    borderRadius: 10,
+    backgroundColor: '#f3f4f6',
+    marginBottom: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#d7dae0',
+  },
+  optionRow: {
+    minWidth: 92,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  optionText: {
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  activeText: {
+    color: '#0a7ea4',
+    fontWeight: '600',
+  },
+  trigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#d7dae0',
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    gap: 2,
+  },
+  triggerText: {
+    fontSize: 14,
+    lineHeight: 18,
+  },
+});
