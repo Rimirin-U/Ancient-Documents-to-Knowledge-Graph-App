@@ -19,7 +19,16 @@ const getMimeType = (fileName: string): string => {
   return mimeTypes[ext || ''] || 'image/jpeg';
 };
 
-export async function uploadImage(uri: string, fileName: string): Promise<{ analysisId: string }> {
+export type UploadImageResponse = {
+  success: true;
+  imageId: number;
+  filename: string;
+  originalName: string;
+  fileSize: number;
+  pipeline_started: boolean;
+};
+
+export async function uploadImage(uri: string, fileName: string): Promise<UploadImageResponse> {
   const formData = new FormData();
 
   if (Platform.OS === 'web' && uri.startsWith('blob:')) {
@@ -35,16 +44,24 @@ export async function uploadImage(uri: string, fileName: string): Promise<{ anal
   }
 
   const headers = await authHeaders();
-  const response = await fetch(`${API_BASE_URL}/api/upload`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/images/upload`, {
     method: 'POST',
     headers,
     body: formData,
   });
-  const result = await response.json();
-  if (!result.success) {
-    throw new Error('上传失败');
+
+  let result: any;
+  try {
+    result = await response.json();
+  } catch {
+    throw new Error('上传失败，请稍后重试');
   }
-  return result;
+
+  if (!response.ok || !result?.success) {
+    throw new Error(result?.message || result?.detail || '上传失败');
+  }
+
+  return result as UploadImageResponse;
 }
 
 export async function getAnalysis(analysisId: string): Promise<any> {

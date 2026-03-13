@@ -141,7 +141,7 @@ export default function RecordScreen() {
 
   function handleBatchDelete() {
     if (!selectedCount) return;
-    Alert.alert('删除提示', '删除操作暂为本地移除，确定继续吗？', [
+    Alert.alert('删除提示', '确定要删除吗？', [
       { text: '取消', style: 'cancel' },
       {
         text: '删除',

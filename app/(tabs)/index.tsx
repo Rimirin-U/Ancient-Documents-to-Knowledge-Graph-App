@@ -6,30 +6,20 @@ import { Pressable } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import { useRouter } from "expo-router";
 import { Alert, StyleSheet } from "react-native";
 import { uploadImage as uploadImageService } from "@/services/analysis";
 import { SFSymbols7_0 } from "sf-symbols-typescript";
 
 
 export default function Index() {
-  const router = useRouter();
   const color = useThemeColor({ light: "black", dark: "white" }, 'text');
-
-  // 传递分析ID
-  const goDetail = (analysisId: string, imageUri: string) => {
-    router.push({
-      pathname: "/detail",
-      params: { analysisId, imageUri },
-    });
-  };
 
   // 上传图片
   const uploadImage = async (uri: string, fileName: string) => {
     console.log("LOG uri:", uri);
     try {
-      const result = await uploadImageService(uri, fileName);
-      goDetail(result.analysisId, uri);
+      await uploadImageService(uri, fileName);
+      Alert.alert('上传成功', '上传成功，后台分析中');
     } catch (error) {
       console.error(error);
       const message = error instanceof Error ? error.message : '请重试';
