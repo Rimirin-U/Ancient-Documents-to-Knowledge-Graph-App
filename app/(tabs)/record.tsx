@@ -6,7 +6,6 @@ import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import {
   getImageRecordList,
-  getImageSourceHeaders,
   RecordImageItem,
   triggerImageAnalysis,
 } from '@/services/record';
@@ -36,7 +35,6 @@ export default function RecordScreen() {
   const menuBorder = useThemeColor({ light: '#d7dae0', dark: '#3a414c' }, 'icon');
 
   const [records, setRecords] = useState<RecordImageItem[]>([]);
-  const [imageHeaders, setImageHeaders] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -61,12 +59,8 @@ export default function RecordScreen() {
     setErrorMessage('');
 
     try {
-      const [list, headers] = await Promise.all([
-        getImageRecordList({ limit: 50 }),
-        getImageSourceHeaders(),
-      ]);
+      const list = await getImageRecordList({ limit: 50 });
       setRecords(list);
-      setImageHeaders(headers);
     } catch (error) {
       const message = error instanceof Error ? error.message : '加载记录失败';
       setErrorMessage(message);
@@ -193,7 +187,6 @@ export default function RecordScreen() {
             item={item}
             selectable={selectMode}
             selected={selectedSet.has(item.id)}
-            imageHeaders={imageHeaders}
             onToggleSelect={toggleSelect}
           />
         )}

@@ -5,7 +5,6 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { memo, useMemo, useState } from 'react';
 import {
   Image,
-  ImageSourcePropType,
   Pressable,
   StyleSheet,
   View,
@@ -15,7 +14,6 @@ type RecordCardProps = {
   item: RecordImageItem;
   selectable: boolean;
   selected: boolean;
-  imageHeaders?: Record<string, string>;
   onToggleSelect: (id: number) => void;
   onPress?: (item: RecordImageItem) => void;
 };
@@ -24,7 +22,6 @@ function RecordCardBase({
   item,
   selectable,
   selected,
-  imageHeaders,
   onToggleSelect,
   onPress,
 }: RecordCardProps) {
@@ -51,10 +48,9 @@ function RecordCardBase({
     });
   }, [item.uploadTime]);
 
-  const imageSource = {
-    uri: item.thumbnailUrl,
-    headers: imageHeaders,
-  } as ImageSourcePropType;
+  const imageSource = item.thumbnailDataUrl
+    ? { uri: item.thumbnailDataUrl }
+    : undefined;
 
   function handlePress() {
     if (selectable) {
@@ -84,7 +80,7 @@ function RecordCardBase({
       ) : null}
 
       <View style={[styles.thumbnail, { borderColor: outline, backgroundColor: thumbnailBg }]}> 
-        {!imageFailed ? (
+        {!imageFailed && imageSource ? (
           <Image
             source={imageSource}
             resizeMode="cover"

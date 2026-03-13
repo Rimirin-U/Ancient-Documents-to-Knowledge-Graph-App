@@ -5,7 +5,7 @@ export type RecordImageItem = {
   title: string;
   filename: string;
   uploadTime: string;
-  thumbnailUrl: string;
+  thumbnailDataUrl?: string;
 };
 
 type PagedIdsResponse = {
@@ -56,7 +56,7 @@ export async function getImageRecordList(params?: {
         title: info.title || `图片 ${id}`,
         filename: info.filename,
         uploadTime: info.upload_time,
-        thumbnailUrl: getImageThumbnailUrl(id),
+        thumbnailDataUrl: await getImageThumbnailDataUrl(id),
       } satisfies RecordImageItem;
     })
   );
@@ -77,12 +77,28 @@ export async function triggerImageAnalysis(imageId: number): Promise<void> {
   }
 }
 
-export async function getImageSourceHeaders(): Promise<Record<string, string>> {
-  return authHeaders();
-}
-
-function getImageThumbnailUrl(imageId: number): string {
-  return `${API_BASE_URL}/api/v1/images/${imageId}/thumbnail`;
+async function getImageThumbnailDataUrl(imageId: number): Promise<string> {
+  const headers = await authHeaders();
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/images/${imageId}/thumbnail`, {
+      headers,
+    });
+    if (!response.ok) {
+      throw new Error(`获取缩略图失败: ${response.status}`);
+    }
+    const blob = await response.blob();
+    const reader = new FileReader();
+    return new Promise((resolve, reject) => {
+      reader.onload = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.warn(`获取缩略图 ${imageId} 失败`, error);
+    return '';
+  }
 }
 
 async function getImageInfo(imageId: number): Promise<ImageInfoResponse['data']> {
