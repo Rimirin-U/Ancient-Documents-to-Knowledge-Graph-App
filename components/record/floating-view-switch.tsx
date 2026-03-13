@@ -1,7 +1,8 @@
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { StyleSheet, Pressable, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 
 type ViewType = 'image' | 'cross-doc';
 
@@ -17,6 +18,8 @@ const viewLabelMap: Record<ViewType, string> = {
   'cross-doc': '跨文档',
 };
 
+const SWITCH_FADE_DURATION = 100;
+
 export function FloatingViewSwitch({
   currentView,
   open,
@@ -26,11 +29,46 @@ export function FloatingViewSwitch({
   const panelBg = useThemeColor({ light: '#f3f4f6', dark: '#22272f' }, 'background');
   const panelBorder = useThemeColor({ light: '#d7dae0', dark: '#3a414c' }, 'icon');
   const arrowColor = useThemeColor({ light: '#616976', dark: '#a1a9b5' }, 'icon');
+  const panelOpacity = useRef(new Animated.Value(open ? 1 : 0)).current;
+  const [panelVisible, setPanelVisible] = useState(open);
+
+  useEffect(() => {
+    if (open) {
+      setPanelVisible(true);
+    }
+
+    Animated.timing(panelOpacity, {
+      toValue: open ? 1 : 0,
+      duration: SWITCH_FADE_DURATION,
+      easing: open ? Easing.out(Easing.quad) : Easing.in(Easing.quad),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished && !open) {
+        setPanelVisible(false);
+      }
+    });
+  }, [open, panelOpacity]);
 
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
-      {open ? (
-        <View style={[styles.panel, { backgroundColor: panelBg, borderColor: panelBorder }]}>
+      {panelVisible ? (
+        <Animated.View
+          style={[
+            styles.panel,
+            { backgroundColor: panelBg, borderColor: panelBorder },
+            {
+              opacity: panelOpacity,
+              transform: [
+                {
+                  translateY: panelOpacity.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [4, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
           <SwitchRow
             label="图片"
             active={currentView === 'image'}
@@ -41,7 +79,7 @@ export function FloatingViewSwitch({
             active={currentView === 'cross-doc'}
             onPress={() => onSelectView('cross-doc')}
           />
-        </View>
+        </Animated.View>
       ) : null}
 
       <Pressable

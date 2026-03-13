@@ -5,16 +5,19 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import {
+  createCrossDocTaskFromImages,
+  deleteImageRecord,
   getImageRecordList,
   RecordImageItem,
-  triggerImageAnalysis,
 } from '@/services/record';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from 'expo-router';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   FlatList,
   Modal,
   Pressable,
@@ -23,6 +26,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const MENU_FADE_DURATION = 100;
 
 export default function RecordScreen() {
   const navigation = useNavigation();
@@ -45,9 +50,9 @@ export default function RecordScreen() {
   const [viewSwitchOpen, setViewSwitchOpen] = useState(false);
   const [batchLoading, setBatchLoading] = useState(false);
   const [currentView, setCurrentView] = useState<'image' | 'cross-doc'>('image');
+  const menuOpacity = useRef(new Animated.Value(0)).current;
 
   const selectedCount = selectedIds.length;
-
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   const fetchRecords = useCallback(async (isRefresh?: boolean) => {
@@ -77,17 +82,38 @@ export default function RecordScreen() {
     fetchRecords();
   }, [fetchRecords]);
 
+  function openHeaderMenu() {
+    if (headerMenuVisible) return;
+    setHeaderMenuVisible(true);
+    menuOpacity.setValue(0);
+    Animated.timing(menuOpacity, {
+      toValue: 1,
+      duration: MENU_FADE_DURATION,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }
+
+  const closeHeaderMenu = useCallback(() => {
+    Animated.timing(menuOpacity, {
+      toValue: 0,
+      duration: MENU_FADE_DURATION,
+      easing: Easing.in(Easing.quad),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) {
+        setHeaderMenuVisible(false);
+      }
+    });
+  }, [menuOpacity]);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: '记录',
       headerRight:
         currentView === 'image'
           ? () => (
-              <Pressable
-                onPress={() => setHeaderMenuVisible(true)}
-                hitSlop={10}
-                style={styles.headerMenuButton}
-              >
+              <Pressable onPress={openHeaderMenu} hitSlop={10} style={styles.headerMenuButton}>
                 <MaterialIcons name="menu" size={26} color={textColor} />
               </Pressable>
             )
@@ -97,7 +123,9 @@ export default function RecordScreen() {
 
   function setSelectModeWithReset(next: boolean) {
     setSelectMode(next);
-    setHeaderMenuVisible(false);
+    if (headerMenuVisible) {
+      closeHeaderMenu();
+    }
     if (next) {
       setViewSwitchOpen(false);
     }
@@ -119,15 +147,12 @@ export default function RecordScreen() {
     if (!selectedCount) return;
     setBatchLoading(true);
     try {
-      const results = await Promise.allSettled(
-        selectedIds.map((id) => triggerImageAnalysis(id))
-      );
-      const successCount = results.filter((item) => item.status === 'fulfilled').length;
-      const failCount = results.length - successCount;
-      Alert.alert('分析任务', `已提交 ${successCount} 项${failCount ? `，失败 ${failCount} 项` : ''}`);
-      if (successCount) {
-        setSelectModeWithReset(false);
-      }
+      await createCrossDocTaskFromImages(selectedIds);
+      Alert.alert('跨文档分析', '跨文档任务已创建并提交分析');
+      setSelectModeWithReset(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '跨文档分析提交失败';
+      Alert.alert('跨文档分析', message);
     } finally {
       setBatchLoading(false);
     }
@@ -140,9 +165,22 @@ export default function RecordScreen() {
       {
         text: '删除',
         style: 'destructive',
-        onPress: () => {
-          setRecords((prev) => prev.filter((item) => !selectedSet.has(item.id)));
-          setSelectModeWithReset(false);
+        onPress: async () => {
+          setBatchLoading(true);
+          try {
+            const results = await Promise.allSettled(selectedIds.map((id) => deleteImageRecord(id)));
+            const successCount = results.filter((item) => item.status === 'fulfilled').length;
+            const failCount = results.length - successCount;
+
+            if (successCount) {
+              await fetchRecords(true);
+              setSelectModeWithReset(false);
+            }
+
+            Alert.alert('删除结果', `已删除 ${successCount} 项${failCount ? `，失败 ${failCount} 项` : ''}`);
+          } finally {
+            setBatchLoading(false);
+          }
         },
       },
     ]);
@@ -153,7 +191,6 @@ export default function RecordScreen() {
     setCurrentView(view);
     if (view === 'cross-doc') {
       setSelectModeWithReset(false);
-      setHeaderMenuVisible(false);
     }
   }
 
@@ -231,29 +268,32 @@ export default function RecordScreen() {
       <Modal
         visible={headerMenuVisible && currentView === 'image'}
         transparent
-        animationType="fade"
-        onRequestClose={() => setHeaderMenuVisible(false)}
+        animationType="none"
+        onRequestClose={closeHeaderMenu}
       >
-        <Pressable
-          style={styles.menuOverlay}
-          onPress={() => setHeaderMenuVisible(false)}
-        >
-          <View
+        <Pressable style={styles.menuOverlay} onPress={closeHeaderMenu}>
+          <Animated.View
             style={[
               styles.headerMenuPanel,
               { backgroundColor: menuBg, borderColor: menuBorder },
               { top: insets.top + 6 },
+              {
+                opacity: menuOpacity,
+                transform: [
+                  {
+                    translateY: menuOpacity.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-4, 0],
+                    }),
+                  },
+                ],
+              },
             ]}
           >
-            <Pressable
-              style={styles.headerMenuItem}
-              onPress={() => setSelectModeWithReset(!selectMode)}
-            >
-              <ThemedText>
-                {selectMode ? '退出多选' : '多选'}
-              </ThemedText>
+            <Pressable style={styles.headerMenuItem} onPress={() => setSelectModeWithReset(!selectMode)}>
+              <ThemedText>{selectMode ? '退出多选' : '多选'}</ThemedText>
             </Pressable>
-          </View>
+          </Animated.View>
         </Pressable>
       </Modal>
     </ThemedView>
@@ -319,7 +359,7 @@ const styles = StyleSheet.create({
 function CrossDocPlaceholder({ subtleColor }: { subtleColor: string }) {
   return (
     <View style={styles.centered}>
-      <ThemedText style={{ color: subtleColor }}>跨文档</ThemedText>
+      <ThemedText style={{ color: subtleColor }}>分析</ThemedText>
     </View>
   );
 }

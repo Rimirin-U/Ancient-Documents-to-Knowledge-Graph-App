@@ -77,6 +77,65 @@ export async function triggerImageAnalysis(imageId: number): Promise<void> {
   }
 }
 
+type MultiTaskFromImagesResponse = {
+  success: boolean;
+  multi_task_id?: number;
+  detail?: string;
+};
+
+type TriggerMultiRelationResponse = {
+  success?: boolean;
+  detail?: string;
+};
+
+type DeleteImageResponse = {
+  success?: boolean;
+  detail?: string;
+};
+
+export async function deleteImageRecord(imageId: number): Promise<void> {
+  const headers = await authHeaders();
+  const response = await fetch(`${API_BASE_URL}/api/v1/images/${imageId}`, {
+    method: 'DELETE',
+    headers,
+  });
+  const result = (await response.json()) as DeleteImageResponse;
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.detail || `删除图片 ${imageId} 失败`);
+  }
+}
+
+export async function createCrossDocTaskFromImages(imageIds: number[]): Promise<number> {
+  const headers = {
+    ...(await authHeaders()),
+    'Content-Type': 'application/json',
+  };
+  const createResponse = await fetch(`${API_BASE_URL}/api/v1/multi-tasks/from-images`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ image_ids: imageIds }),
+  });
+  const createResult = (await createResponse.json()) as MultiTaskFromImagesResponse;
+
+  if (!createResponse.ok || !createResult.success || !createResult.multi_task_id) {
+    throw new Error(createResult.detail || '创建跨文档任务失败');
+  }
+
+  const analyzeResponse = await fetch(`${API_BASE_URL}/api/v1/multi-relation-graphs`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ multi_task_id: createResult.multi_task_id }),
+  });
+  const analyzeResult = (await analyzeResponse.json()) as TriggerMultiRelationResponse;
+
+  if (!analyzeResponse.ok || !analyzeResult.success) {
+    throw new Error(analyzeResult.detail || '触发跨文档分析失败');
+  }
+
+  return createResult.multi_task_id;
+}
+
 async function getImageThumbnailDataUrl(imageId: number): Promise<string> {
   const headers = await authHeaders();
   try {
