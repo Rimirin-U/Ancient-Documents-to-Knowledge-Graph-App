@@ -40,7 +40,7 @@ export default function RootLayout() {
         <RouteGuard>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="detail" options={{ headerShown: true, title: '结果' }} />
+            <Stack.Screen name="image-detail" options={{ headerShown: true, title: '图片详情' }} />
             <Stack.Screen name="login" options={{ headerShown: false }} />
             <Stack.Screen name="register" options={{ headerShown: true, title: '注册' }} />
             <Stack.Screen name="edit-profile" options={{ headerShown: true, title: '修改个人信息' }} />

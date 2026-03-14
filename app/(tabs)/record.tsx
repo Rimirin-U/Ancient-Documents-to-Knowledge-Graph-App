@@ -15,7 +15,7 @@ import {
   RecordImageItem,
 } from '@/services/record';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useNavigation } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -35,6 +35,7 @@ const MENU_FADE_DURATION = 100;
 
 export default function RecordScreen() {
   const navigation = useNavigation();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const pageBg = useThemeColor({ light: '#eceef1', dark: '#121418' }, 'background');
@@ -253,6 +254,16 @@ export default function RecordScreen() {
     setSelectModeWithReset(false);
   }
 
+  function handleOpenImageDetail(item: RecordImageItem) {
+    router.push({
+      pathname: '/image-detail' as any,
+      params: {
+        imageId: String(item.id),
+        title: item.title,
+      },
+    });
+  }
+
   function renderImageList() {
     if (loading) {
       return (
@@ -284,6 +295,7 @@ export default function RecordScreen() {
             selectable={selectMode}
             selected={selectedSet.has(item.id)}
             onToggleSelect={toggleSelect}
+            onPress={handleOpenImageDetail}
           />
         )}
         ListEmptyComponent={
