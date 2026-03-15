@@ -1,4 +1,4 @@
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   clamp,
   useAnimatedStyle,
@@ -15,10 +15,14 @@ type ZoomableImageModalProps = {
 
 export function ZoomableImageModal({ visible, imageUri, onClose }: ZoomableImageModalProps) {
   const scale = useSharedValue(1);
+  const scaleOffset = useSharedValue(1);
 
   const pinch = Gesture.Pinch()
+    .onStart(() => {
+      scaleOffset.value = scale.value;
+    })
     .onUpdate((event) => {
-      scale.value = clamp(event.scale, 1, 4);
+      scale.value = clamp(scaleOffset.value * event.scale, 1, 4);
     })
     .onEnd(() => {
       if (scale.value < 1.02) {
@@ -37,8 +41,9 @@ export function ZoomableImageModal({ visible, imageUri, onClose }: ZoomableImage
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={closeAndReset}>
-      <Pressable style={styles.overlay} onPress={closeAndReset}>
-        <View style={styles.inner}>
+      <GestureHandlerRootView style={styles.overlay}>
+        <Pressable style={styles.backdrop} onPress={closeAndReset} />
+        <View style={styles.inner} pointerEvents="box-none">
           {imageUri ? (
             <GestureDetector gesture={pinch}>
               <Animated.View style={[styles.imageWrap, animatedStyle]}>
@@ -47,7 +52,7 @@ export function ZoomableImageModal({ visible, imageUri, onClose }: ZoomableImage
             </GestureDetector>
           ) : null}
         </View>
-      </Pressable>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -56,6 +61,9 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
   },
   inner: {
     flex: 1,

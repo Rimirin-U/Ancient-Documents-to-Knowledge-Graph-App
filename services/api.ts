@@ -3,7 +3,7 @@
 
 import { getToken } from './auth';
 
-export const API_BASE_URL = 'http://192.168.43.126:3000';
+export const API_BASE_URL = 'http://8.162.9.49:3000';
 
 export async function authHeaders(): Promise<Record<string, string>> {
   const token = await getToken();

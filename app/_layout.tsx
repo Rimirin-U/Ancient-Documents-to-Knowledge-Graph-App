@@ -4,6 +4,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -35,19 +36,21 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   return (
-    <AuthProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <RouteGuard>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="image-detail" options={{ headerShown: true, title: '图片详情' }} />
-            <Stack.Screen name="login" options={{ headerShown: false }} />
-            <Stack.Screen name="register" options={{ headerShown: true, title: '注册' }} />
-            <Stack.Screen name="edit-profile" options={{ headerShown: true, title: '修改个人信息' }} />
-          </Stack>
-        </RouteGuard>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <RouteGuard>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="image-detail" options={{ headerShown: true, title: '图片详情' }} />
+              <Stack.Screen name="login" options={{ headerShown: false }} />
+              <Stack.Screen name="register" options={{ headerShown: true, title: '注册' }} />
+              <Stack.Screen name="edit-profile" options={{ headerShown: true, title: '修改个人信息' }} />
+            </Stack>
+          </RouteGuard>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }
