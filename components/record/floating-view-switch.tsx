@@ -1,5 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
-import { useThemeColor } from '@/hooks/useColor';
+import { useColor } from '@/hooks/useColor';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
@@ -26,9 +26,9 @@ export function FloatingViewSwitch({
   onToggleOpen,
   onSelectView,
 }: FloatingViewSwitchProps) {
-  const panelBg = useThemeColor({ light: '#f3f4f6', dark: '#22272f' }, 'background');
-  const panelBorder = useThemeColor({ light: '#d7dae0', dark: '#3a414c' }, 'icon');
-  const arrowColor = useThemeColor({ light: '#616976', dark: '#a1a9b5' }, 'icon');
+  const panelBg = useColor('background', { light: '#f3f4f6', dark: '#22272f' });
+  const panelBorder = useColor('icon', { light: '#d7dae0', dark: '#3a414c' });
+  const arrowColor = useColor('icon', { light: '#616976', dark: '#a1a9b5' });
   const panelOpacity = useRef(new Animated.Value(open ? 1 : 0)).current;
   const [panelVisible, setPanelVisible] = useState(open);
 

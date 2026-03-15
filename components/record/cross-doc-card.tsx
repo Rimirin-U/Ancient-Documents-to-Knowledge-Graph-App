@@ -1,5 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
-import { useThemeColor } from '@/hooks/useColor';
+import { useColor } from '@/hooks/useColor';
 import { CrossDocRecordItem } from '@/services/record';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { memo, useMemo } from 'react';
@@ -20,11 +20,11 @@ function CrossDocCardBase({
   onToggleSelect,
   onPress,
 }: CrossDocCardProps) {
-  const cardBg = useThemeColor({ light: '#f7f7f8', dark: '#1f2226' }, 'background');
-  const muted = useThemeColor({ light: '#5f6368', dark: '#a9b1ba' }, 'icon');
-  const outline = useThemeColor({ light: '#d9dce1', dark: '#383d44' }, 'icon');
-  const checkboxBg = useThemeColor({ light: '#ffffff', dark: '#0f1115' }, 'background');
-  const thumbnailBg = useThemeColor({ light: '#eceef1', dark: '#161a20' }, 'background');
+  const cardBg = useColor('background', { light: '#f7f7f8', dark: '#1f2226' });
+  const muted = useColor('icon', { light: '#5f6368', dark: '#a9b1ba' });
+  const outline = useColor('icon', { light: '#d9dce1', dark: '#383d44' });
+  const checkboxBg = useColor('background', { light: '#ffffff', dark: '#0f1115' });
+  const thumbnailBg = useColor('background', { light: '#eceef1', dark: '#161a20' });
 
   const uploadText = useMemo(() => {
     const date = new Date(item.uploadTime);

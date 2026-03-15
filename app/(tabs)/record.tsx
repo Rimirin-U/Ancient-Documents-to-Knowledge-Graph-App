@@ -4,7 +4,7 @@ import { RecordCard } from '@/components/record/record-card';
 import { SelectionActions } from '@/components/record/selection-actions';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useThemeColor } from '@/hooks/useColor';
+import { useColor } from '@/hooks/useColor';
 import {
   createCrossDocTaskFromImages,
   CrossDocRecordItem,
@@ -38,11 +38,11 @@ export default function RecordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const pageBg = useThemeColor({ light: '#eceef1', dark: '#121418' }, 'background');
-  const textColor = useThemeColor({}, 'text');
-  const subtleColor = useThemeColor({ light: '#616976', dark: '#a1a9b5' }, 'icon');
-  const menuBg = useThemeColor({ light: '#f4f5f7', dark: '#21262e' }, 'background');
-  const menuBorder = useThemeColor({ light: '#d7dae0', dark: '#3a414c' }, 'icon');
+  const pageBg = useColor('background', { light: '#eceef1', dark: '#121418' });
+  const textColor = useColor('text', {});
+  const subtleColor = useColor('icon', { light: '#616976', dark: '#a1a9b5' });
+  const menuBg = useColor('background', { light: '#f4f5f7', dark: '#21262e' });
+  const menuBorder = useColor('icon', { light: '#d7dae0', dark: '#3a414c' });
 
   const [records, setRecords] = useState<RecordImageItem[]>([]);
   const [crossDocRecords, setCrossDocRecords] = useState<CrossDocRecordItem[]>([]);

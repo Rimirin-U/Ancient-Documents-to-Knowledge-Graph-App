@@ -1,5 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
-import { useThemeColor } from '@/hooks/useColor';
+import { useColor } from '@/hooks/useColor';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { PropsWithChildren, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -15,8 +15,8 @@ export function AnalysisSectionCard({
   children,
 }: AnalysisSectionCardProps) {
   const [open, setOpen] = useState(defaultOpen);
-  const cardBg = useThemeColor({ light: '#f2f3f5', dark: '#252b34' }, 'background');
-  const cardBorder = useThemeColor({ light: '#dbdee4', dark: '#39424f' }, 'icon');
+  const cardBg = useColor('background', { light: '#f2f3f5', dark: '#252b34' });
+  const cardBorder = useColor('icon', { light: '#dbdee4', dark: '#39424f' });
 
   return (
     <View style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}> 

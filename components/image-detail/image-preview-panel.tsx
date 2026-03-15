@@ -1,5 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
-import { useThemeColor } from '@/hooks/useColor';
+import { useColor } from '@/hooks/useColor';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 type ImagePreviewPanelProps = {
@@ -9,7 +9,7 @@ type ImagePreviewPanelProps = {
 };
 
 export function ImagePreviewPanel({ imageUri, loading, onPressImage }: ImagePreviewPanelProps) {
-  const surface = useThemeColor({ light: '#d9d9da', dark: '#2a2e35' }, 'background');
+  const surface = useColor('background', { light: '#d9d9da', dark: '#2a2e35' });
 
   return (
     <View style={[styles.container, { backgroundColor: surface }]}> 

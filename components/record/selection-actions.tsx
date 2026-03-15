@@ -1,5 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
-import { useThemeColor } from '@/hooks/useColor';
+import { useColor } from '@/hooks/useColor';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 type SelectionActionsProps = {
@@ -39,8 +39,8 @@ function ActionButton({
   onPress: () => void;
   disabled?: boolean;
 }) {
-  const cancelBg = useThemeColor({ light: '#f3f4f6', dark: '#22272f' }, 'background');
-  const cancelText = useThemeColor({ light: '#262b33', dark: '#d7dce3' }, 'text');
+  const cancelBg = useColor('background', { light: '#f3f4f6', dark: '#22272f' });
+  const cancelText = useColor('text', { light: '#262b33', dark: '#d7dce3' });
 
   const colorMap = {
     cancel: cancelBg,

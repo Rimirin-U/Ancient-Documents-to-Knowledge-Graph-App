@@ -1,5 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
-import { useThemeColor } from '@/hooks/useColor';
+import { useColor } from '@/hooks/useColor';
 import { StyleSheet, View } from 'react-native';
 
 type StructuredContentListProps = {
@@ -8,8 +8,8 @@ type StructuredContentListProps = {
 
 export function StructuredContentList({ content }: StructuredContentListProps) {
   const keys = Object.keys(content);
-  const borderColor = useThemeColor({ light: '#d6dae1', dark: '#39414d' }, 'icon');
-  const keyColor = useThemeColor({ light: '#4c5360', dark: '#adb6c2' }, 'icon');
+  const borderColor = useColor('icon', { light: '#d6dae1', dark: '#39414d' });
+  const keyColor = useColor('icon', { light: '#4c5360', dark: '#adb6c2' });
 
   if (!keys.length) {
     return <ThemedText>结构化结果为空</ThemedText>;

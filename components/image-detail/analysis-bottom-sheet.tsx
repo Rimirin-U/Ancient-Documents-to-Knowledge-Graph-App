@@ -1,4 +1,4 @@
-import { useThemeColor } from '@/hooks/useColor';
+import { useColor } from '@/hooks/useColor';
 import { PropsWithChildren, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Animated,
@@ -21,9 +21,9 @@ export function AnalysisBottomSheet({
 }: AnalysisBottomSheetProps) {
   const { height } = useWindowDimensions();
 
-  const panelBg = useThemeColor({ light: '#f6f7f9', dark: '#1d2229' }, 'background');
-  const borderColor = useThemeColor({ light: '#d8dbe1', dark: '#3a424d' }, 'icon');
-  const handleColor = useThemeColor({ light: '#a5a9b1', dark: '#68717f' }, 'icon');
+  const panelBg = useColor('background', { light: '#f6f7f9', dark: '#1d2229' });
+  const borderColor = useColor('icon', { light: '#d8dbe1', dark: '#3a424d' });
+  const handleColor = useColor('icon', { light: '#a5a9b1', dark: '#68717f' });
 
   const collapsedTop = useMemo(() => height * collapsedTopRatio, [height, collapsedTopRatio]);
   const expandedTop = useMemo(() => height * expandedTopRatio, [height, expandedTopRatio]);

@@ -1,4 +1,4 @@
-import { useThemeColor } from '@/hooks/useColor';
+import { useColor } from '@/hooks/useColor';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -19,9 +19,9 @@ export function ModuleActionBar({
   onRefresh,
   disabled,
 }: ModuleActionBarProps) {
-  const normalRing = useThemeColor({ light: '#d4a31c', dark: '#cfaf58' }, 'icon');
-  const activeRing = useThemeColor({ light: '#8d6b0e', dark: '#f0d98e' }, 'text');
-  const iconColor = useThemeColor({ light: '#c69212', dark: '#d7bb68' }, 'icon');
+  const normalRing = useColor('icon', { light: '#d4a31c', dark: '#cfaf58' });
+  const activeRing = useColor('text', { light: '#8d6b0e', dark: '#f0d98e' });
+  const iconColor = useColor('icon', { light: '#c69212', dark: '#d7bb68' });
 
   const safeCount = Math.max(1, count);
 

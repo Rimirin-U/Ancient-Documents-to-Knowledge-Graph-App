@@ -5,14 +5,14 @@ import * as ImagePicker from 'expo-image-picker';
 import { Pressable } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { useThemeColor } from "@/hooks/useColor";
+import { useColor } from "@/hooks/useColor";
 import { Alert, StyleSheet } from "react-native";
 import { uploadImage as uploadImageService } from "@/services/analysis";
 import { SFSymbols7_0 } from "sf-symbols-typescript";
 
 
 export default function Index() {
-  const color = useThemeColor({ light: "black", dark: "white" }, 'text');
+  const color = useColor('text', { light: "black", dark: "white" });
 
   // 上传图片
   const uploadImage = async (uri: string, fileName: string) => {
