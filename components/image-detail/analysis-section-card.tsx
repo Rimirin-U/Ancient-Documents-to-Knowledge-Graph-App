@@ -1,8 +1,13 @@
 import { ThemedText } from '@/components/themed-text';
-import { useColor } from '@/hooks/useColor';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { PropsWithChildren, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Card } from '@/components/ui/card';
 
 type AnalysisSectionCardProps = PropsWithChildren<{
   title: string;
@@ -14,36 +19,36 @@ export function AnalysisSectionCard({
   defaultOpen = true,
   children,
 }: AnalysisSectionCardProps) {
-  const [open, setOpen] = useState(defaultOpen);
-  const cardBg = useColor('background', { light: '#f2f3f5', dark: '#252b34' });
-  const cardBorder = useColor('icon', { light: '#dbdee4', dark: '#39424f' });
+  const [value, setValue] = useState<string | string[]>(defaultOpen ? 'content' : '');
 
   return (
-    <View style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}> 
-      <Pressable style={styles.header} onPress={() => setOpen((prev) => !prev)}>
-        <ThemedText type="defaultSemiBold">{title}</ThemedText>
-        <MaterialIcons name={open ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={20} />
-      </Pressable>
-      {open ? <View style={styles.content}>{children}</View> : null}
-    </View>
+    <Card style={styles.card}>
+      <Accordion
+        type="single"
+        collapsible
+        value={value}
+        onValueChange={setValue}
+      >
+        <AccordionItem value="content">
+          <AccordionTrigger>
+            <ThemedText type="defaultSemiBold">{title}</ThemedText>
+          </AccordionTrigger>
+          <AccordionContent>
+            <View style={styles.content}>{children}</View>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
   content: {
-    marginTop: 8,
+    marginTop: 2,
     gap: 8,
   },
 });

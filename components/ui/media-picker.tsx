@@ -1,9 +1,9 @@
 import { Button, ButtonSize, ButtonVariant } from '@/components/ui/button';
+import { Image } from '@/components/ui/image';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
 import { CORNERS, FONT_SIZE } from '@/theme/globals';
-import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import { LucideProps, Video, X } from 'lucide-react-native';
@@ -174,13 +174,15 @@ export const MediaPicker = forwardRef<RNView, MediaPickerProps>(
       }
 
       try {
+        const pickerMediaTypes =
+          mediaType === 'image'
+            ? [ImagePicker.MediaType.images]
+            : mediaType === 'video'
+            ? [ImagePicker.MediaType.videos]
+            : [ImagePicker.MediaType.images, ImagePicker.MediaType.videos];
+
         const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes:
-            mediaType === 'image'
-              ? ImagePicker.MediaTypeOptions.Images
-              : mediaType === 'video'
-              ? ImagePicker.MediaTypeOptions.Videos
-              : ImagePicker.MediaTypeOptions.All,
+          mediaTypes: pickerMediaTypes,
           allowsMultipleSelection: multiple,
           quality: quality === 'high' ? 1 : quality === 'medium' ? 0.7 : 0.3,
           selectionLimit: multiple ? maxSelection : 1,
@@ -277,13 +279,14 @@ export const MediaPicker = forwardRef<RNView, MediaPickerProps>(
 
     const renderPreviewItem = ({ item }: { item: MediaAsset }) => (
       <View style={[styles.previewItem, { borderColor }]}>
-        <ExpoImage
+        <Image
           source={{ uri: item.uri }}
           style={[
             styles.previewImage,
             { width: previewSize, height: previewSize },
           ]}
           contentFit='cover'
+          variant='rounded'
         />
         {item.type === 'video' && (
           <View style={styles.videoIndicator}>
@@ -312,10 +315,11 @@ export const MediaPicker = forwardRef<RNView, MediaPickerProps>(
           ]}
           onPress={() => handleGalleryAssetSelect(item)}
         >
-          <ExpoImage
+          <Image
             source={{ uri: item.uri }}
             style={styles.galleryImage}
             contentFit='cover'
+            variant='default'
           />
           {item.mediaType === MediaLibrary.MediaType.video && (
             <View style={styles.videoIndicator}>

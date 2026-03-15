@@ -5,8 +5,12 @@ import { ModuleActionBar } from '@/components/image-detail/module-action-bar';
 import { RelationGraphPanel } from '@/components/image-detail/relation-graph-panel';
 import { StructuredContentList } from '@/components/image-detail/structured-content-list';
 import { ZoomableImageModal } from '@/components/image-detail/zoomable-image-modal';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/toast';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useColor } from '@/hooks/useColor';
 import {
   getImageDetailAnalysis,
   ImageDetailAnalysis,
@@ -18,10 +22,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
   Platform,
-  Pressable,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -32,6 +33,8 @@ const IMAGE_AREA_RATIO = 0.75;
 export default function ImageDetailScreen() {
   const navigation = useNavigation();
   const { height } = useWindowDimensions();
+  const toast = useToast();
+  const pageSurface = useColor('background', { light: '#f6f7f9', dark: '#1d2229' });
   const params = useLocalSearchParams<{ imageId?: string; title?: string }>();
 
   const imageId = useMemo(() => Number(params.imageId), [params.imageId]);
@@ -104,11 +107,11 @@ export default function ImageDetailScreen() {
     setActionLoading(true);
     try {
       await action();
-      Alert.alert('提示', successText);
+      toast.success('提示', successText);
       await loadAnalysis(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : '操作失败';
-      Alert.alert('失败', message);
+      toast.error('失败', message);
     } finally {
       setActionLoading(false);
     }
@@ -121,7 +124,7 @@ export default function ImageDetailScreen() {
 
   function handleTriggerStructured() {
     if (!selectedOcr?.id) {
-      Alert.alert('提示', '暂无OCR结果，请先执行识别');
+      toast.warning('提示', '暂无OCR结果，请先执行识别');
       return;
     }
 
@@ -130,7 +133,7 @@ export default function ImageDetailScreen() {
 
   function handleTriggerRelationGraph() {
     if (!selectedStructured?.id) {
-      Alert.alert('提示', '暂无结构化结果，请先执行结构化分析');
+      toast.warning('提示', '暂无结构化结果，请先执行结构化分析');
       return;
     }
 
@@ -140,7 +143,7 @@ export default function ImageDetailScreen() {
   async function copyText(value: string, emptyHint: string) {
     const text = value.trim();
     if (!text) {
-      Alert.alert('提示', emptyHint);
+      toast.warning('提示', emptyHint);
       return;
     }
 
@@ -149,7 +152,7 @@ export default function ImageDetailScreen() {
     } else {
       await Clipboard.setStringAsync(text);
     }
-    Alert.alert('提示', '已复制到剪贴板');
+    toast.success('提示', '已复制到剪贴板');
   }
 
   function handleCopyOcr() {
@@ -173,8 +176,8 @@ export default function ImageDetailScreen() {
   const imageHeight = Math.round(height * IMAGE_AREA_RATIO);
 
   return (
-    <ThemedView style={styles.container}>
-      <View style={[styles.imageArea, { height: imageHeight }]}>
+    <ThemedView style={[styles.container, { backgroundColor: pageSurface }]}>
+      <View style={[styles.imageArea, { height: imageHeight, backgroundColor: pageSurface }]}>
         <ImagePreviewPanel
           imageUri={analysis?.imageDataUrl}
           loading={loading}
@@ -185,7 +188,8 @@ export default function ImageDetailScreen() {
       <AnalysisBottomSheet collapsedTopRatio={IMAGE_AREA_RATIO} expandedTopRatio={0.2}>
         {loading ? (
           <View style={styles.centeredWrap}>
-            <ActivityIndicator size="small" />
+            <Skeleton width="100%" height={48} />
+            <Skeleton width="70%" height={16} />
             <ThemedText>加载分析结果中...</ThemedText>
           </View>
         ) : null}
@@ -193,9 +197,9 @@ export default function ImageDetailScreen() {
         {errorMessage ? (
           <View style={styles.centeredWrap}>
             <ThemedText style={styles.errorText}>{errorMessage}</ThemedText>
-            <Pressable style={styles.actionButton} onPress={() => loadAnalysis()}>
-              <ThemedText style={styles.actionButtonText}>重试</ThemedText>
-            </Pressable>
+            <Button variant="outline" size="sm" onPress={() => loadAnalysis()}>
+              重试
+            </Button>
           </View>
         ) : null}
 
@@ -259,7 +263,6 @@ export default function ImageDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#d9d9da',
   },
   imageArea: {
     width: '100%',
@@ -279,15 +282,5 @@ const styles = StyleSheet.create({
   blockText: {
     fontSize: 14,
     lineHeight: 20,
-  },
-  actionButton: {
-    borderRadius: 8,
-    backgroundColor: '#0a7ea4',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontWeight: '600',
   },
 });

@@ -1,5 +1,7 @@
 // app/login.tsx
 // 登录页
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/toast';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/theme/colors';
@@ -8,11 +10,8 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   StyleSheet,
   TextInput,
 } from 'react-native';
@@ -22,6 +21,7 @@ export default function LoginScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const { login } = useAuth();
   const router = useRouter();
+  const toast = useToast();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -29,14 +29,14 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     if (!username.trim() || !password.trim()) {
-      Alert.alert('提示', '请填写用户名和密码');
+      toast.warning('提示', '请填写用户名和密码');
       return;
     }
     setLoading(true);
     try {
       await login(username.trim(), password);
     } catch (e: any) {
-      Alert.alert('登录失败', e.message ?? '请稍后重试');
+      toast.error('登录失败', e.message ?? '请稍后重试');
     } finally {
       setLoading(false);
     }
@@ -69,21 +69,18 @@ export default function LoginScreen() {
           secureTextEntry
         />
 
-        <Pressable
-          style={[styles.button, { backgroundColor: colors.tint }, loading && styles.buttonDisabled]}
+        <Button
+          style={[styles.button, { backgroundColor: colors.tint }]}
           onPress={handleLogin}
           disabled={loading}
+          loading={loading}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <ThemedText style={styles.buttonText}>登录</ThemedText>
-          )}
-        </Pressable>
+          登录
+        </Button>
 
-        <Pressable onPress={() => router.push('/register' as any)} style={styles.link}>
-          <ThemedText type="link">注册</ThemedText>
-        </Pressable>
+        <Button variant="link" onPress={() => router.push('/register' as any)} style={styles.link}>
+          注册
+        </Button>
       </KeyboardAvoidingView>
     </ThemedView>
   );
@@ -111,21 +108,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   button: {
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
     marginTop: 4,
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
-  },
   link: {
-    alignItems: 'center',
     marginTop: 4,
   },
 });

@@ -1,9 +1,11 @@
 import { ThemedText } from '@/components/themed-text';
+import { Card } from '@/components/ui/card';
+import { Image } from '@/components/ui/image';
 import { useColor } from '@/hooks/useColor';
 import { CrossDocRecordItem } from '@/services/record';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { memo, useMemo } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 type CrossDocCardProps = {
   item: CrossDocRecordItem;
@@ -49,49 +51,51 @@ function CrossDocCardBase({
   const previews = item.previewThumbnailDataUrls.slice(0, 3);
 
   return (
-    <Pressable style={[styles.container, { backgroundColor: cardBg }]} onPress={handlePress}>
-      {selectable ? (
-        <Pressable hitSlop={8} onPress={() => onToggleSelect(item.id)} style={styles.checkboxWrap}>
-          <View style={[styles.checkbox, { borderColor: outline, backgroundColor: checkboxBg }]}>
-            {selected ? <MaterialIcons name="check" size={16} color="#1f6feb" /> : null}
-          </View>
-        </Pressable>
-      ) : null}
-
-      <View style={styles.stackWrap}>
-        {previews.length ? (
-          previews.map((url, index) => (
-            <View
-              key={`${item.id}-${index}`}
-              style={[
-                styles.stackItem,
-                {
-                  borderColor: outline,
-                  backgroundColor: thumbnailBg,
-                  left: index * 12,
-                  zIndex: previews.length - index,
-                },
-              ]}
-            >
-              <Image source={{ uri: url }} resizeMode="cover" style={styles.image} />
+    <Pressable onPress={handlePress}>
+      <Card style={[styles.container, { backgroundColor: cardBg }]}>
+        {selectable ? (
+          <Pressable hitSlop={8} onPress={() => onToggleSelect(item.id)} style={styles.checkboxWrap}>
+            <View style={[styles.checkbox, { borderColor: outline, backgroundColor: checkboxBg }]}>
+              {selected ? <MaterialIcons name="check" size={16} color="#1f6feb" /> : null}
             </View>
-          ))
-        ) : (
-          <View style={[styles.stackItem, styles.singleFallback, { borderColor: outline, backgroundColor: thumbnailBg }]}>
-            <ThemedText>缩略图</ThemedText>
-          </View>
-        )}
-      </View>
+          </Pressable>
+        ) : null}
 
-      <View style={styles.meta}>
-        <ThemedText type="defaultSemiBold" style={styles.title} numberOfLines={1}>
-          {item.title}
-        </ThemedText>
-        <ThemedText style={[styles.fileName, { color: muted }]} numberOfLines={1}>
-          {item.filename}
-        </ThemedText>
-        <ThemedText style={[styles.time, { color: muted }]}>{uploadText}</ThemedText>
-      </View>
+        <View style={styles.stackWrap}>
+          {previews.length ? (
+            previews.map((url, index) => (
+              <View
+                key={`${item.id}-${index}`}
+                style={[
+                  styles.stackItem,
+                  {
+                    borderColor: outline,
+                    backgroundColor: thumbnailBg,
+                    left: index * 12,
+                    zIndex: previews.length - index,
+                  },
+                ]}
+              >
+                <Image source={{ uri: url }} contentFit="cover" variant="default" style={styles.image} />
+              </View>
+            ))
+          ) : (
+            <View style={[styles.stackItem, styles.singleFallback, { borderColor: outline, backgroundColor: thumbnailBg }]}>
+              <ThemedText>缩略图</ThemedText>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.meta}>
+          <ThemedText type="defaultSemiBold" style={styles.title} numberOfLines={1}>
+            {item.title}
+          </ThemedText>
+          <ThemedText style={[styles.fileName, { color: muted }]} numberOfLines={1}>
+            {item.filename}
+          </ThemedText>
+          <ThemedText style={[styles.time, { color: muted }]}>{uploadText}</ThemedText>
+        </View>
+      </Card>
     </Pressable>
   );
 }

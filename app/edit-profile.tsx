@@ -1,3 +1,7 @@
+import { AlertDialog } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/toast';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/theme/colors';
@@ -6,11 +10,8 @@ import { getMe, updateMe } from '@/services/user';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -20,12 +21,14 @@ export default function EditProfileScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
+  const toast = useToast();
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savedDialogVisible, setSavedDialogVisible] = useState(false);
 
   useEffect(() => {
     getMe()
@@ -33,13 +36,13 @@ export default function EditProfileScreen() {
         setUsername(info.username);
         setEmail(info.email);
       })
-      .catch((e: any) => Alert.alert('错误', e.message ?? '获取用户信息失败'))
+      .catch((e: any) => toast.error('错误', e.message ?? '获取用户信息失败'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [toast]);
 
   async function handleSave() {
     if (!username.trim() || !email.trim()) {
-      Alert.alert('提示', '用户名和邮箱不能为空');
+      toast.warning('提示', '用户名和邮箱不能为空');
       return;
     }
     setSaving(true);
@@ -52,11 +55,9 @@ export default function EditProfileScreen() {
         params.password = password.trim();
       }
       await updateMe(params);
-      Alert.alert('成功', '个人信息已更新', [
-        { text: '确认', onPress: () => router.back() },
-      ]);
+      setSavedDialogVisible(true);
     } catch (e: any) {
-      Alert.alert('更新失败', e.message ?? '请稍后重试');
+      toast.error('更新失败', e.message ?? '请稍后重试');
     } finally {
       setSaving(false);
     }
@@ -67,7 +68,9 @@ export default function EditProfileScreen() {
   if (loading) {
     return (
       <ThemedView style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.tint} />
+        <Skeleton width="85%" height={44} />
+        <Skeleton width="85%" height={44} />
+        <Skeleton width="85%" height={44} />
       </ThemedView>
     );
   }
@@ -108,18 +111,29 @@ export default function EditProfileScreen() {
             placeholderTextColor={colors.icon}
           />
 
-          <Pressable
-            style={[styles.button, styles.editButton, saving && styles.buttonDisabled]}
+          <Button
+            style={[styles.button, styles.editButton]}
             onPress={handleSave}
             disabled={saving}
+            loading={saving}
           >
-            {saving
-              ? <ActivityIndicator color="#fff" />
-              : <ThemedText style={styles.buttonText}>保存修改</ThemedText>
-            }
-          </Pressable>
+            保存修改
+          </Button>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <AlertDialog
+        isVisible={savedDialogVisible}
+        onClose={() => setSavedDialogVisible(false)}
+        title="成功"
+        description="个人信息已更新"
+        confirmText="确认"
+        showCancelButton={false}
+        onConfirm={() => {
+          setSavedDialogVisible(false);
+          router.back();
+        }}
+      />
     </ThemedView>
   );
 }
@@ -144,20 +158,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   button: {
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
     marginTop: 8,
   },
   editButton: {
     backgroundColor: '#0a7ea4',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 15,
   },
 });

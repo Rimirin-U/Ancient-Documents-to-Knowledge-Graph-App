@@ -1,5 +1,8 @@
 // app/register.tsx
 // 注册页
+import { AlertDialog } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/toast';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/theme/colors';
@@ -8,11 +11,8 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   StyleSheet,
   TextInput,
 } from 'react-native';
@@ -22,30 +22,30 @@ export default function RegisterScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const { register } = useAuth();
   const router = useRouter();
+  const toast = useToast();
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [successDialogVisible, setSuccessDialogVisible] = useState(false);
 
   async function handleRegister() {
     if (!username.trim() || !email.trim() || !password.trim()) {
-      Alert.alert('提示', '请填写所有必填项');
+      toast.warning('提示', '请填写所有必填项');
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('提示', '两次输入的密码不一致');
+      toast.warning('提示', '两次输入的密码不一致');
       return;
     }
     setLoading(true);
     try {
       await register(username.trim(), password, email.trim());
-      Alert.alert('注册成功', '请登录', [
-        { text: '确认', onPress: () => router.replace('/login' as any) },
-      ]);
+      setSuccessDialogVisible(true);
     } catch (e: any) {
-      Alert.alert('注册失败', e.message ?? '请稍后重试');
+      toast.error('注册失败', e.message ?? '请稍后重试');
     } finally {
       setLoading(false);
     }
@@ -98,22 +98,33 @@ export default function RegisterScreen() {
           secureTextEntry
         />
 
-        <Pressable
-          style={[styles.button, { backgroundColor: colors.tint }, loading && styles.buttonDisabled]}
+        <Button
+          style={[styles.button, { backgroundColor: colors.tint }]}
           onPress={handleRegister}
           disabled={loading}
+          loading={loading}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <ThemedText style={styles.buttonText}>注册</ThemedText>
-          )}
-        </Pressable>
+          注册
+        </Button>
 
-        <Pressable onPress={() => router.back()} style={styles.link}>
-          <ThemedText type="link">已有账号？去登录</ThemedText>
-        </Pressable>
+        <Button variant="link" onPress={() => router.back()} style={styles.link}>
+          已有账号？去登录
+        </Button>
       </KeyboardAvoidingView>
+
+      <AlertDialog
+        isVisible={successDialogVisible}
+        onClose={() => setSuccessDialogVisible(false)}
+        title="注册成功"
+        description="请登录"
+        confirmText="确认"
+        cancelText="取消"
+        showCancelButton={false}
+        onConfirm={() => {
+          setSuccessDialogVisible(false);
+          router.replace('/login' as any);
+        }}
+      />
     </ThemedView>
   );
 }
@@ -140,21 +151,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   button: {
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
     marginTop: 4,
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
-  },
   link: {
-    alignItems: 'center',
     marginTop: 4,
   },
 });

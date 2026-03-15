@@ -2,6 +2,9 @@ import { CrossDocCard } from '@/components/record/cross-doc-card';
 import { FloatingViewSwitch } from '@/components/record/floating-view-switch';
 import { RecordCard } from '@/components/record/record-card';
 import { SelectionActions } from '@/components/record/selection-actions';
+import { AlertDialog } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/toast';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColor } from '@/hooks/useColor';
@@ -19,7 +22,6 @@ import { useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   Easing,
   FlatList,
@@ -37,6 +39,7 @@ export default function RecordScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const toast = useToast();
 
   const pageBg = useColor('background', { light: '#eceef1', dark: '#121418' });
   const textColor = useColor('text', {});
@@ -55,6 +58,7 @@ export default function RecordScreen() {
   const [headerMenuVisible, setHeaderMenuVisible] = useState(false);
   const [viewSwitchOpen, setViewSwitchOpen] = useState(false);
   const [batchLoading, setBatchLoading] = useState(false);
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
   const [currentView, setCurrentView] = useState<'image' | 'cross-doc'>('image');
   const menuOpacity = useRef(new Animated.Value(0)).current;
 
@@ -178,14 +182,14 @@ export default function RecordScreen() {
     setBatchLoading(true);
     try {
       await createCrossDocTaskFromImages(selectedIds);
-      Alert.alert('跨文档分析', '跨文档任务已创建并提交分析');
+      toast.success('跨文档分析', '跨文档任务已创建并提交分析');
       setSelectModeWithReset(false);
       if (currentView === 'cross-doc') {
         await fetchCrossDocRecords(true);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : '跨文档分析提交失败';
-      Alert.alert('跨文档分析', message);
+      toast.error('跨文档分析', message);
     } finally {
       setBatchLoading(false);
     }
@@ -193,59 +197,41 @@ export default function RecordScreen() {
 
   function handleBatchDelete() {
     if (!selectedCount) return;
+    setDeleteDialogVisible(true);
+  }
 
-    if (currentView === 'cross-doc') {
-      Alert.alert('删除提示', '确定要删除吗？', [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '删除',
-          style: 'destructive',
-          onPress: async () => {
-            setBatchLoading(true);
-            try {
-              const results = await Promise.allSettled(selectedIds.map((id) => deleteCrossDocTask(id)));
-              const successCount = results.filter((item) => item.status === 'fulfilled').length;
-              const failCount = results.length - successCount;
+  async function confirmBatchDelete() {
+    setDeleteDialogVisible(false);
+    setBatchLoading(true);
 
-              if (successCount) {
-                await fetchCrossDocRecords(true);
-                setSelectModeWithReset(false);
-              }
+    try {
+      if (currentView === 'cross-doc') {
+        const results = await Promise.allSettled(selectedIds.map((id) => deleteCrossDocTask(id)));
+        const successCount = results.filter((item) => item.status === 'fulfilled').length;
+        const failCount = results.length - successCount;
 
-              Alert.alert('删除结果', `已删除 ${successCount} 项${failCount ? `，失败 ${failCount} 项` : ''}`);
-            } finally {
-              setBatchLoading(false);
-            }
-          },
-        },
-      ]);
-      return;
+        if (successCount) {
+          await fetchCrossDocRecords(true);
+          setSelectModeWithReset(false);
+        }
+
+        toast.info('删除结果', `已删除 ${successCount} 项${failCount ? `，失败 ${failCount} 项` : ''}`);
+        return;
+      }
+
+      const results = await Promise.allSettled(selectedIds.map((id) => deleteImageRecord(id)));
+      const successCount = results.filter((item) => item.status === 'fulfilled').length;
+      const failCount = results.length - successCount;
+
+      if (successCount) {
+        await fetchImageRecords(true);
+        setSelectModeWithReset(false);
+      }
+
+      toast.info('删除结果', `已删除 ${successCount} 项${failCount ? `，失败 ${failCount} 项` : ''}`);
+    } finally {
+      setBatchLoading(false);
     }
-
-    Alert.alert('删除提示', '确定要删除吗？', [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '删除',
-        style: 'destructive',
-        onPress: async () => {
-          setBatchLoading(true);
-          try {
-            const results = await Promise.allSettled(selectedIds.map((id) => deleteImageRecord(id)));
-            const successCount = results.filter((item) => item.status === 'fulfilled').length;
-            const failCount = results.length - successCount;
-
-            if (successCount) {
-              await fetchImageRecords(true);
-              setSelectModeWithReset(false);
-            }
-
-            Alert.alert('删除结果', `已删除 ${successCount} 项${failCount ? `，失败 ${failCount} 项` : ''}`);
-          } finally {
-            setBatchLoading(false);
-          }
-        },
-      },
-    ]);
   }
 
   function handleViewSelect(view: 'image' | 'cross-doc') {
@@ -277,9 +263,9 @@ export default function RecordScreen() {
       return (
         <View style={styles.centered}>
           <ThemedText style={styles.errorText}>{errorMessage}</ThemedText>
-          <Pressable style={styles.retryButton} onPress={() => fetchImageRecords()}>
-            <ThemedText style={styles.retryButtonText}>重试</ThemedText>
-          </Pressable>
+          <Button variant="outline" size="sm" onPress={() => fetchImageRecords()}>
+            重试
+          </Button>
         </View>
       );
     }
@@ -327,9 +313,9 @@ export default function RecordScreen() {
       return (
         <View style={styles.centered}>
           <ThemedText style={styles.errorText}>{errorMessage}</ThemedText>
-          <Pressable style={styles.retryButton} onPress={() => fetchCrossDocRecords()}>
-            <ThemedText style={styles.retryButtonText}>重试</ThemedText>
-          </Pressable>
+          <Button variant="outline" size="sm" onPress={() => fetchCrossDocRecords()}>
+            重试
+          </Button>
         </View>
       );
     }
@@ -417,6 +403,17 @@ export default function RecordScreen() {
           </Animated.View>
         </Pressable>
       </Modal>
+
+      <AlertDialog
+        isVisible={deleteDialogVisible}
+        onClose={() => setDeleteDialogVisible(false)}
+        title="删除提示"
+        description={`确定要删除已选中的 ${selectedCount} 项吗？`}
+        confirmText="删除"
+        cancelText="取消"
+        onConfirm={confirmBatchDelete}
+        onCancel={() => setDeleteDialogVisible(false)}
+      />
     </ThemedView>
   );
 }
@@ -437,16 +434,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     textAlign: 'center',
-  },
-  retryButton: {
-    borderRadius: 8,
-    backgroundColor: '#0a7ea4',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
   },
   listContent: {
     paddingHorizontal: 12,

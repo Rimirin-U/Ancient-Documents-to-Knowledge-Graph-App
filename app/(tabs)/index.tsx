@@ -1,61 +1,57 @@
-import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-
+import { Button } from '@/components/ui/button';
+import { MediaAsset, MediaPicker } from '@/components/ui/media-picker';
+import { useToast } from '@/components/ui/toast';
 import * as ImagePicker from 'expo-image-picker';
-import { Pressable } from "react-native";
-
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { useColor } from "@/hooks/useColor";
-import { Alert, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 import { uploadImage as uploadImageService } from "@/services/analysis";
-import { SFSymbols7_0 } from "sf-symbols-typescript";
 
 
 export default function Index() {
-  const color = useColor('text', { light: "black", dark: "white" });
+  const toast = useToast();
 
   // 上传图片
   const uploadImage = async (uri: string, fileName: string) => {
-    console.log("LOG uri:", uri);
     try {
       await uploadImageService(uri, fileName);
-      Alert.alert('上传成功', '上传成功，后台分析中');
+      toast.success('上传成功', '上传成功，后台分析中');
     } catch (error) {
       console.error(error);
       const message = error instanceof Error ? error.message : '请重试';
-      Alert.alert('上传失败', message);
+      toast.error('上传失败', message);
     }
   };
 
-  // 选择图片
-  const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false,
-      quality: 1,
-    });
-    // log
-    console.log(result);
-    // after
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      const fileName = asset.fileName || `image_${Date.now()}.jpg`;
-      await uploadImage(asset.uri, fileName);
-    }
+  const handleMediaSelected = async (assets: MediaAsset[]) => {
+    const asset = assets[assets.length - 1];
+    if (!asset) return;
+    const fileName = asset.filename || `image_${Date.now()}.jpg`;
+    await uploadImage(asset.uri, fileName);
   };
 
-  // 拍摄图片
-  const takePhoto = async () => {
-    const result = await ImagePicker.launchCameraAsync({
-      quality: 1,
-    });
-    // log
-    console.log(result);
-    // after
-    if (!result.canceled) {
+  const handleTakePhoto = async () => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        toast.warning('权限不足', '请先授予相机权限');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: [ImagePicker.MediaType.images],
+        quality: 1,
+      });
+
+      if (result.canceled || !result.assets?.length) {
+        return;
+      }
+
       const asset = result.assets[0];
       const fileName = asset.fileName || `photo_${Date.now()}.jpg`;
       await uploadImage(asset.uri, fileName);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '拍摄失败，请重试';
+      toast.error('拍摄失败', message);
     }
   };
 
@@ -63,43 +59,19 @@ export default function Index() {
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.row}>
-        {/* 相册 */}
-        <ActionButton
-          icon="photo.fill"
-          text="选择图片"
-          color={color}
-          onPress={pickImage}
+        <MediaPicker
+          mediaType="image"
+          multiple={false}
+          showPreview={false}
+          buttonText="选择图片"
+          onSelectionChange={handleMediaSelected}
         />
 
-        {/* 相机 */}
-        <ActionButton
-          icon="camera.fill"
-          text="拍摄图片"
-          color={color}
-          onPress={takePhoto}
-        />
+        <Button variant="secondary" onPress={handleTakePhoto}>
+          拍摄图片
+        </Button>
       </ThemedView>
     </ThemedView>
-  );
-}
-
-// ActionButton
-function ActionButton({
-  icon,
-  text,
-  color,
-  onPress,
-}: {
-  icon: SFSymbols7_0;
-  text: string;
-  color: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable style={styles.button} onPress={onPress}>
-      <IconSymbol size={32} name={icon} color={color} />
-      <ThemedText style={styles.buttonText}>{text}</ThemedText>
-    </Pressable>
   );
 }
 
@@ -111,18 +83,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   row: {
-    flexDirection: "row",
-    gap: 32,
-  },
-  button: {
-    width: 120,
-    height: 120,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  buttonText: {
-    marginTop: 8,
-    fontSize: 14,
+    width: '80%',
+    gap: 16,
   },
 });

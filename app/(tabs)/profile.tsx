@@ -1,3 +1,8 @@
+import { AlertDialog } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/toast';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/theme/colors';
@@ -7,9 +12,6 @@ import { getMe, UserInfo } from '@/services/user';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -22,9 +24,11 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { logout } = useAuth();
   const router = useRouter();
+  const toast = useToast();
 
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loadingInfo, setLoadingInfo] = useState(true);
+  const [logoutDialogVisible, setLogoutDialogVisible] = useState(false);
 
   useEffect(() => {
     fetchUser();
@@ -36,27 +40,22 @@ export default function ProfileScreen() {
       const info = await getMe();
       setUserInfo(info);
     } catch (e: any) {
-      Alert.alert('错误', e.message ?? '获取用户信息失败');
+      toast.error('错误', e.message ?? '获取用户信息失败');
     } finally {
       setLoadingInfo(false);
     }
   }
 
   function handleLogout() {
-    Alert.alert('退出登录', '确定要退出登录吗？', [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '确定退出',
-        style: 'destructive',
-        onPress: async () => { await logout(); },
-      },
-    ]);
+    setLogoutDialogVisible(true);
   }
 
   if (loadingInfo) {
     return (
       <ThemedView style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.tint} />
+        <Skeleton width="88%" height={120} />
+        <Skeleton width="88%" height={46} />
+        <Skeleton width="88%" height={46} />
       </ThemedView>
     );
   }
@@ -65,7 +64,7 @@ export default function ProfileScreen() {
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         {userInfo && (
-          <ThemedView style={styles.container}>
+          <Card style={styles.card}>
             <InfoRow label="用户名" value={userInfo.username} colors={colors} />
             <InfoRow label="邮箱" value={userInfo.email} colors={colors} />
             <InfoRow
@@ -73,25 +72,41 @@ export default function ProfileScreen() {
               value={new Date(userInfo.created_at).toLocaleDateString('zh-CN')}
               colors={colors}
             />
-          </ThemedView>
+          </Card>
         )}
 
         <View style={styles.actions}>
-          <Pressable
+          <Button
             style={[styles.button, styles.editButton]}
             onPress={() => router.push('/edit-profile' as any)}
+            variant="default"
           >
-            <ThemedText style={styles.buttonText}>修改个人信息</ThemedText>
-          </Pressable>
+            修改个人信息
+          </Button>
 
-          <Pressable
+          <Button
             style={[styles.button, styles.logoutButton]}
             onPress={handleLogout}
+            variant="destructive"
           >
-            <ThemedText style={styles.buttonText}>退出登录</ThemedText>
-          </Pressable>
+            退出登录
+          </Button>
         </View>
       </ScrollView>
+
+      <AlertDialog
+        isVisible={logoutDialogVisible}
+        onClose={() => setLogoutDialogVisible(false)}
+        title="退出登录"
+        description="确定要退出登录吗？"
+        confirmText="确定退出"
+        cancelText="取消"
+        onCancel={() => setLogoutDialogVisible(false)}
+        onConfirm={async () => {
+          setLogoutDialogVisible(false);
+          await logout();
+        }}
+      />
     </ThemedView>
   );
 }
@@ -116,11 +131,6 @@ function InfoRow({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 12,
-  },
   content: {
     padding: 24,
     gap: 16,
@@ -152,17 +162,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   button: {
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
+    width: '100%',
   },
   editButton: {
     backgroundColor: '#0a7ea4',
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 15,
   },
   logoutButton: {
     backgroundColor: '#e05252',

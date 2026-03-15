@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
+import { Image } from '@/components/ui/image';
 import { useColor } from '@/hooks/useColor';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 type ImagePreviewPanelProps = {
   imageUri?: string;
@@ -9,13 +10,13 @@ type ImagePreviewPanelProps = {
 };
 
 export function ImagePreviewPanel({ imageUri, loading, onPressImage }: ImagePreviewPanelProps) {
-  const surface = useColor('background', { light: '#d9d9da', dark: '#2a2e35' });
+  const surface = useColor('background', { light: '#f6f7f9', dark: '#1d2229' });
 
   return (
     <View style={[styles.container, { backgroundColor: surface }]}> 
       {imageUri ? (
         <Pressable style={styles.imageWrap} onPress={onPressImage}>
-          <Image source={{ uri: imageUri }} resizeMode="contain" style={styles.image} />
+          <Image source={{ uri: imageUri }} contentFit="contain" variant="default" style={styles.image} />
         </Pressable>
       ) : (
         <View style={styles.placeholder}>

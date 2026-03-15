@@ -1,10 +1,11 @@
 import { ThemedText } from '@/components/themed-text';
+import { Card } from '@/components/ui/card';
+import { Image } from '@/components/ui/image';
 import { useColor } from '@/hooks/useColor';
 import { RecordImageItem } from '@/services/record';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { memo, useMemo, useState } from 'react';
 import {
-  Image,
   Pressable,
   StyleSheet,
   View,
@@ -58,48 +59,48 @@ function RecordCardBase({
   }
 
   return (
-    <Pressable
-      style={[styles.container, { backgroundColor: cardBg }]}
-      onPress={handlePress}
-    >
-      {selectable ? (
-        <Pressable
-          hitSlop={8}
-          onPress={() => onToggleSelect(item.id)}
-          style={styles.checkboxWrap}
-        >
-          <View style={[styles.checkbox, { borderColor: outline, backgroundColor: checkboxBg }]}>
-            {selected ? (
-              <MaterialIcons name="check" size={16} color="#1f6feb" />
-            ) : null}
-          </View>
-        </Pressable>
-      ) : null}
+    <Pressable onPress={handlePress}>
+      <Card style={[styles.container, { backgroundColor: cardBg }]}>
+        {selectable ? (
+          <Pressable
+            hitSlop={8}
+            onPress={() => onToggleSelect(item.id)}
+            style={styles.checkboxWrap}
+          >
+            <View style={[styles.checkbox, { borderColor: outline, backgroundColor: checkboxBg }]}>
+              {selected ? (
+                <MaterialIcons name="check" size={16} color="#1f6feb" />
+              ) : null}
+            </View>
+          </Pressable>
+        ) : null}
 
-      <View style={[styles.thumbnail, { borderColor: outline, backgroundColor: thumbnailBg }]}> 
-        {!imageFailed && imageSource ? (
-          <Image
-            source={imageSource}
-            resizeMode="cover"
-            style={styles.image}
-            onError={() => setImageFailed(true)}
-          />
-        ) : (
-          <View style={styles.fallback}>
-            <ThemedText>缩略图</ThemedText>
-          </View>
-        )}
-      </View>
+        <View style={[styles.thumbnail, { borderColor: outline, backgroundColor: thumbnailBg }]}> 
+          {!imageFailed && imageSource ? (
+            <Image
+              source={imageSource}
+              contentFit="cover"
+              variant="default"
+              style={styles.image}
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <View style={styles.fallback}>
+              <ThemedText>缩略图</ThemedText>
+            </View>
+          )}
+        </View>
 
-      <View style={styles.meta}>
-        <ThemedText type="defaultSemiBold" style={styles.title} numberOfLines={1}>
-          {item.title}
-        </ThemedText>
-        <ThemedText style={[styles.fileName, { color: muted }]} numberOfLines={1}>
-          {item.filename}
-        </ThemedText>
-        <ThemedText style={[styles.time, { color: muted }]}>{uploadText}</ThemedText>
-      </View>
+        <View style={styles.meta}>
+          <ThemedText type="defaultSemiBold" style={styles.title} numberOfLines={1}>
+            {item.title}
+          </ThemedText>
+          <ThemedText style={[styles.fileName, { color: muted }]} numberOfLines={1}>
+            {item.filename}
+          </ThemedText>
+          <ThemedText style={[styles.time, { color: muted }]}>{uploadText}</ThemedText>
+        </View>
+      </Card>
     </Pressable>
   );
 }

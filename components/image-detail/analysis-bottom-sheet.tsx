@@ -12,12 +12,14 @@ import {
 type AnalysisBottomSheetProps = PropsWithChildren<{
   collapsedTopRatio?: number;
   expandedTopRatio?: number;
+  onTopChange?: (top: number) => void;
 }>;
 
 export function AnalysisBottomSheet({
   children,
   collapsedTopRatio = 0.75,
   expandedTopRatio = 0.2,
+  onTopChange,
 }: AnalysisBottomSheetProps) {
   const { height } = useWindowDimensions();
 
@@ -36,7 +38,20 @@ export function AnalysisBottomSheet({
     const target = expandedRef.current ? expandedTop : collapsedTop;
     top.setValue(target);
     topOffsetRef.current = target;
-  }, [collapsedTop, expandedTop, top]);
+    onTopChange?.(target);
+  }, [collapsedTop, expandedTop, onTopChange, top]);
+
+  useEffect(() => {
+    if (!onTopChange) return;
+
+    const id = top.addListener(({ value }) => {
+      onTopChange(value);
+    });
+
+    return () => {
+      top.removeListener(id);
+    };
+  }, [onTopChange, top]);
 
   const animateTo = useCallback((value: number, nextExpanded: boolean) => {
     expandedRef.current = nextExpanded;
@@ -48,8 +63,9 @@ export function AnalysisBottomSheet({
       mass: 0.6,
     }).start(() => {
       topOffsetRef.current = value;
+      onTopChange?.(value);
     });
-  }, [top]);
+  }, [onTopChange, top]);
 
   const panResponder = useMemo(
     () =>
@@ -63,6 +79,7 @@ export function AnalysisBottomSheet({
         onPanResponderMove: (_, gestureState) => {
           const nextTop = Math.max(expandedTop, Math.min(collapsedTop, topOffsetRef.current + gestureState.dy));
           top.setValue(nextTop);
+          onTopChange?.(nextTop);
         },
         onPanResponderRelease: (_, gestureState) => {
           const currentTop = topOffsetRef.current + gestureState.dy;

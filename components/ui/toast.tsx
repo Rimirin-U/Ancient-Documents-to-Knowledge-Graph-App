@@ -57,7 +57,8 @@ const EXPANDED_WIDTH = screenWidth - 32;
 // Reanimated spring configuration
 const SPRING_CONFIG = {
   stiffness: 120,
-  damping: 8,
+  damping: 20,
+  mass: 1,
 };
 
 export function Toast({

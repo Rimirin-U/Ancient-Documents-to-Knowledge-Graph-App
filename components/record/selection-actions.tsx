@@ -1,6 +1,5 @@
-import { ThemedText } from '@/components/themed-text';
-import { useColor } from '@/hooks/useColor';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Button } from '@/components/ui/button';
+import { StyleSheet, View } from 'react-native';
 
 type SelectionActionsProps = {
   onCancel: () => void;
@@ -39,32 +38,22 @@ function ActionButton({
   onPress: () => void;
   disabled?: boolean;
 }) {
-  const cancelBg = useColor('background', { light: '#f3f4f6', dark: '#22272f' });
-  const cancelText = useColor('text', { light: '#262b33', dark: '#d7dce3' });
-
-  const colorMap = {
-    cancel: cancelBg,
-    primary: '#10a7e0',
-    danger: '#f35f67',
-  } as const;
-
-  const textMap = {
-    cancel: cancelText,
-    primary: '#ffffff',
-    danger: '#ffffff',
+  const variantMap = {
+    cancel: 'secondary',
+    primary: 'default',
+    danger: 'destructive',
   } as const;
 
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.button,
-        { backgroundColor: colorMap[kind], opacity: pressed || disabled ? 0.75 : 1 },
-      ]}
+    <Button
+      size="sm"
+      variant={variantMap[kind]}
+      style={styles.button}
       onPress={onPress}
       disabled={disabled}
     >
-      <ThemedText style={[styles.buttonText, { color: textMap[kind] }]}>{label}</ThemedText>
-    </Pressable>
+      {label}
+    </Button>
   );
 }
 
@@ -77,16 +66,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   button: {
-    minWidth: 62,
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '600',
+    minWidth: 68,
   },
 });

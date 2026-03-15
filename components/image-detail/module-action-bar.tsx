@@ -1,6 +1,8 @@
+import { Button } from '@/components/ui/button';
+import { Text } from '@/components/ui/text';
 import { useColor } from '@/hooks/useColor';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Copy, RefreshCw } from 'lucide-react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 type ModuleActionBarProps = {
   count: number;
@@ -21,7 +23,7 @@ export function ModuleActionBar({
 }: ModuleActionBarProps) {
   const normalRing = useColor('icon', { light: '#d4a31c', dark: '#cfaf58' });
   const activeRing = useColor('text', { light: '#8d6b0e', dark: '#f0d98e' });
-  const iconColor = useColor('icon', { light: '#c69212', dark: '#d7bb68' });
+  const selectorText = useColor('text', { light: '#5e4a10', dark: '#f0d98e' });
 
   const safeCount = Math.max(1, count);
 
@@ -35,38 +37,31 @@ export function ModuleActionBar({
         {Array.from({ length: safeCount }).map((_, index) => {
           const active = index === selectedIndex;
           return (
-            <Pressable
+            <Button
               key={index}
               onPress={() => onSelect(index)}
               disabled={disabled}
+              size="icon"
+              variant={active ? 'default' : 'outline'}
               style={[
                 styles.circle,
                 {
                   borderColor: active ? activeRing : normalRing,
-                  opacity: disabled ? 0.55 : 1,
+                  backgroundColor: active ? activeRing : 'transparent',
                 },
               ]}
             >
-              <View
-                style={[
-                  styles.circleDot,
-                  {
-                    backgroundColor: active ? activeRing : 'transparent',
-                  },
-                ]}
-              />
-            </Pressable>
+              <Text style={[styles.circleLabel, { color: active ? '#fff' : selectorText }]}>
+                {index + 1}
+              </Text>
+            </Button>
           );
         })}
       </ScrollView>
 
       <View style={styles.iconGroup}>
-        <Pressable onPress={onCopy} disabled={disabled} style={styles.iconButton}>
-          <MaterialIcons name="content-copy" size={18} color={iconColor} style={{ opacity: disabled ? 0.55 : 1 }} />
-        </Pressable>
-        <Pressable onPress={onRefresh} disabled={disabled} style={styles.iconButton}>
-          <MaterialIcons name="refresh" size={19} color={iconColor} style={{ opacity: disabled ? 0.55 : 1 }} />
-        </Pressable>
+        <Button size="icon" variant="outline" icon={Copy} onPress={onCopy} disabled={disabled} />
+        <Button size="icon" variant="outline" icon={RefreshCw} onPress={onRefresh} disabled={disabled} />
       </View>
     </View>
   );
@@ -86,25 +81,23 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   circle: {
-    width: 16,
-    height: 16,
+    width: 28,
+    height: 28,
     borderRadius: 999,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 0,
   },
-  circleDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 999,
+  circleLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 14,
   },
   iconGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     marginLeft: 8,
-  },
-  iconButton: {
-    padding: 2,
   },
 });

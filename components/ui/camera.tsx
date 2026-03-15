@@ -504,9 +504,7 @@ export const Camera = forwardRef<CameraRef, CameraProps>(
                       )}
                     </View>
                     <View style={styles.topCenter}>
-                      <Text style={[styles.modeText, { color: textColor }]}>
-                        {mode.toUpperCase()}
-                      </Text>
+                      <View />
                     </View>
                     <View style={styles.topRight}>
                       <TouchableOpacity

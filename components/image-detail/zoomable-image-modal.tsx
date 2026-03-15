@@ -5,7 +5,8 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { Image, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Image } from '@/components/ui/image';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
 type ZoomableImageModalProps = {
   visible: boolean;
@@ -47,7 +48,7 @@ export function ZoomableImageModal({ visible, imageUri, onClose }: ZoomableImage
           {imageUri ? (
             <GestureDetector gesture={pinch}>
               <Animated.View style={[styles.imageWrap, animatedStyle]}>
-                <Image source={{ uri: imageUri }} resizeMode="contain" style={styles.image} />
+                <Image source={{ uri: imageUri }} contentFit="contain" variant="default" style={styles.image} />
               </Animated.View>
             </GestureDetector>
           ) : null}
