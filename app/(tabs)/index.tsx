@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Pressable } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { useThemeColor } from "@/hooks/use-theme-color";
+import { useThemeColor } from "@/hooks/useColor";
 import { Alert, StyleSheet } from "react-native";
 import { uploadImage as uploadImageService } from "@/services/analysis";
 import { SFSymbols7_0 } from "sf-symbols-typescript";

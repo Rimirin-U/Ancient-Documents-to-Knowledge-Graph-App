@@ -1,6 +1,5 @@
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/context/auth-context';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { ThemeProvider } from '@/theme/theme-provider';
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -21,9 +20,9 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
     if (isLoading) return;
     const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
     if (!isLoggedIn && !inAuthGroup) {
-      router.replace('/login');
+      router.replace('/login' as any);
     } else if (isLoggedIn && inAuthGroup) {
-      router.replace('/(tabs)');
+      router.replace('/(tabs)' as any);
     }
   }, [isLoggedIn, isLoading, segments]);
 
@@ -34,11 +33,10 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <ThemeProvider>
           <RouteGuard>
             <Stack>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

@@ -1,5 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { useThemeColor } from '@/hooks/useColor';
 import { CrossDocRecordItem } from '@/services/record';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { memo, useMemo } from 'react';

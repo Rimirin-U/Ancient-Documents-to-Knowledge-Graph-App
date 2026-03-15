@@ -1,8 +1,8 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
+import { Colors } from '@/theme/colors';
 import { useAuth } from '@/context/auth-context';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import { getMe, UserInfo } from '@/services/user';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';

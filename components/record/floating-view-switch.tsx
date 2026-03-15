@@ -1,5 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { useThemeColor } from '@/hooks/useColor';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';

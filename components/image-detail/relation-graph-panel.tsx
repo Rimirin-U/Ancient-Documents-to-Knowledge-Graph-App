@@ -1,6 +1,6 @@
 import { Chart } from '@/components/echarts/echarts';
 import { ThemedText } from '@/components/themed-text';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 type RelationGraphPanelProps = {
   content: unknown;

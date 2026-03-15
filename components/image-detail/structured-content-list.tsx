@@ -1,5 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { useThemeColor } from '@/hooks/useColor';
 import { StyleSheet, View } from 'react-native';
 
 type StructuredContentListProps = {

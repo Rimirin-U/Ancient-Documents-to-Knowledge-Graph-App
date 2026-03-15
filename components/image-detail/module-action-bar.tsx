@@ -1,4 +1,4 @@
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { useThemeColor } from '@/hooks/useColor';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
