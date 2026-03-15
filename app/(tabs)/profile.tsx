@@ -80,6 +80,7 @@ export default function ProfileScreen() {
             style={[styles.button, styles.editButton]}
             onPress={() => router.push('/edit-profile' as any)}
             variant="default"
+            textStyle={styles.editButtonText}
           >
             修改个人信息
           </Button>
@@ -165,7 +166,12 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   editButton: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  editButtonText: {
+    color: '#111827',
   },
   logoutButton: {
     backgroundColor: '#e05252',

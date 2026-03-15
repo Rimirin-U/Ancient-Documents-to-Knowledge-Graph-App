@@ -8,7 +8,7 @@ type ModuleActionBarProps = {
   count: number;
   selectedIndex: number;
   onSelect: (index: number) => void;
-  onCopy: () => void;
+  onCopy?: () => void;
   onRefresh: () => void;
   disabled?: boolean;
 };
@@ -60,7 +60,9 @@ export function ModuleActionBar({
       </ScrollView>
 
       <View style={styles.iconGroup}>
-        <Button size="icon" variant="outline" icon={Copy} onPress={onCopy} disabled={disabled} />
+        {onCopy ? (
+          <Button size="icon" variant="outline" icon={Copy} onPress={onCopy} disabled={disabled} />
+        ) : null}
         <Button size="icon" variant="outline" icon={RefreshCw} onPress={onRefresh} disabled={disabled} />
       </View>
     </View>

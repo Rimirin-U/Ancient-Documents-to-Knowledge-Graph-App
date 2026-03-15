@@ -115,8 +115,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   handleZone: {
-    paddingTop: 8,
-    paddingBottom: 10,
+    paddingTop: 12,
+    paddingBottom: 15,
     alignItems: 'center',
   },
   handle: {

@@ -1,28 +1,47 @@
 import { ThemedText } from '@/components/themed-text';
 import { useColor } from '@/hooks/useColor';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-type StructuredContentListProps = {
-  content: Record<string, unknown>;
+export type StructuredDisplayItem = {
+  key: string;
+  label: string;
+  value: string;
 };
 
-export function StructuredContentList({ content }: StructuredContentListProps) {
-  const keys = Object.keys(content);
+type StructuredContentListProps = {
+  items: StructuredDisplayItem[];
+  onCopyValue?: (value: string) => void;
+};
+
+export function StructuredContentList({ items, onCopyValue }: StructuredContentListProps) {
   const borderColor = useColor('icon', { light: '#d6dae1', dark: '#39414d' });
   const keyColor = useColor('icon', { light: '#4c5360', dark: '#adb6c2' });
+  const pressedBg = useColor('background', { light: '#eceff4', dark: '#2a313b' });
 
-  if (!keys.length) {
+  if (!items.length) {
     return <ThemedText>结构化结果为空</ThemedText>;
   }
 
   return (
     <View style={[styles.list, { borderColor }]}>
-      {keys.map((key) => (
-        <View key={key} style={[styles.row, { borderColor }]}>
-          <ThemedText style={[styles.keyText, { color: keyColor }]}>{key}</ThemedText>
-          <ThemedText style={styles.valueText}>{String(content[key] ?? '')}</ThemedText>
-        </View>
-      ))}
+      {items.map((item, index) => {
+        const isLast = index === items.length - 1;
+
+        return (
+          <View
+            key={item.key}
+            style={[styles.row, { borderColor, borderBottomWidth: isLast ? 0 : 1 }]}
+          >
+            <ThemedText style={[styles.keyText, { color: keyColor }]}>{item.label}</ThemedText>
+            <Pressable
+              style={({ pressed }) => [styles.valuePressable, pressed && { backgroundColor: pressedBg }]}
+              onPress={() => onCopyValue?.(item.value)}
+            >
+              <ThemedText style={styles.valueText}>{item.value || '-'}</ThemedText>
+            </Pressable>
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -45,8 +64,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  valueText: {
+  valuePressable: {
     flex: 1,
+    borderRadius: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  valueText: {
     fontSize: 14,
     lineHeight: 20,
   },

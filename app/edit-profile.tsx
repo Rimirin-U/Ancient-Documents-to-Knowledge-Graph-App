@@ -116,6 +116,7 @@ export default function EditProfileScreen() {
             onPress={handleSave}
             disabled={saving}
             loading={saving}
+            textStyle={styles.editButtonText}
           >
             保存修改
           </Button>
@@ -161,6 +162,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   editButton: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  editButtonText: {
+    color: '#111827',
   },
 });

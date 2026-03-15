@@ -176,10 +176,10 @@ export const MediaPicker = forwardRef<RNView, MediaPickerProps>(
       try {
         const pickerMediaTypes =
           mediaType === 'image'
-            ? [ImagePicker.MediaType.images]
+            ? ImagePicker.MediaTypeOptions.Images
             : mediaType === 'video'
-            ? [ImagePicker.MediaType.videos]
-            : [ImagePicker.MediaType.images, ImagePicker.MediaType.videos];
+            ? ImagePicker.MediaTypeOptions.Videos
+            : ImagePicker.MediaTypeOptions.All;
 
         const result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: pickerMediaTypes,

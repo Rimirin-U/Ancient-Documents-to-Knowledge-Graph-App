@@ -38,7 +38,7 @@ export default function Index() {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: [ImagePicker.MediaType.images],
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 1,
       });
 

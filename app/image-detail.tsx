@@ -3,8 +3,12 @@ import { AnalysisSectionCard } from '@/components/image-detail/analysis-section-
 import { ImagePreviewPanel } from '@/components/image-detail/image-preview-panel';
 import { ModuleActionBar } from '@/components/image-detail/module-action-bar';
 import { RelationGraphPanel } from '@/components/image-detail/relation-graph-panel';
-import { StructuredContentList } from '@/components/image-detail/structured-content-list';
+import {
+  StructuredContentList,
+  StructuredDisplayItem,
+} from '@/components/image-detail/structured-content-list';
 import { ZoomableImageModal } from '@/components/image-detail/zoomable-image-modal';
+import { toStructuredDisplayItems } from '@/constants/structured-field-labels';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
@@ -12,8 +16,16 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColor } from '@/hooks/useColor';
 import {
-  getImageDetailAnalysis,
-  ImageDetailAnalysis,
+  getImageDataUrl,
+  getOcrDetail,
+  getOcrIdsByImage,
+  getRelationGraphDetail,
+  getRelationGraphIdsByStructured,
+  getStructuredDetail,
+  getStructuredIdsByOcr,
+  OcrAnalysis,
+  RelationGraphAnalysis,
+  StructuredAnalysis,
   triggerImageOcr,
   triggerRelationGraphAnalysis,
   triggerStructuredAnalysis,
@@ -43,7 +55,13 @@ export default function ImageDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [analysis, setAnalysis] = useState<ImageDetailAnalysis | null>(null);
+  const [imageDataUrl, setImageDataUrl] = useState<string>('');
+  const [ocrIds, setOcrIds] = useState<number[]>([]);
+  const [structuredIds, setStructuredIds] = useState<number[]>([]);
+  const [relationGraphIds, setRelationGraphIds] = useState<number[]>([]);
+  const [selectedOcr, setSelectedOcr] = useState<OcrAnalysis | null>(null);
+  const [selectedStructured, setSelectedStructured] = useState<StructuredAnalysis | null>(null);
+  const [selectedRelation, setSelectedRelation] = useState<RelationGraphAnalysis | null>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [selectedOcrIndex, setSelectedOcrIndex] = useState(0);
   const [selectedStructuredIndex, setSelectedStructuredIndex] = useState(0);
@@ -55,7 +73,7 @@ export default function ImageDetailScreen() {
     });
   }, [navigation, pageTitle]);
 
-  const loadAnalysis = useCallback(async (showLoading = true) => {
+  const loadBaseData = useCallback(async (showLoading = true) => {
     if (!Number.isFinite(imageId)) {
       setErrorMessage('缺少 imageId 参数');
       setLoading(false);
@@ -68,8 +86,14 @@ export default function ImageDetailScreen() {
     setErrorMessage('');
 
     try {
-      const result = await getImageDetailAnalysis(imageId);
-      setAnalysis(result);
+      const [nextImageDataUrl, nextOcrIds] = await Promise.all([
+        getImageDataUrl(imageId),
+        getOcrIdsByImage(imageId),
+      ]);
+
+      setImageDataUrl(nextImageDataUrl);
+      setOcrIds(nextOcrIds);
+      setSelectedOcrIndex(nextOcrIds.length ? nextOcrIds.length - 1 : 0);
     } catch (error) {
       const message = error instanceof Error ? error.message : '加载图片详情失败';
       setErrorMessage(message);
@@ -81,34 +105,129 @@ export default function ImageDetailScreen() {
   }, [imageId]);
 
   useEffect(() => {
-    loadAnalysis();
-  }, [loadAnalysis]);
+    loadBaseData();
+  }, [loadBaseData]);
 
   useEffect(() => {
-    setSelectedOcrIndex((prev) => {
-      const max = Math.max(analysis?.ocrList.length ?? 0, 1) - 1;
-      return Math.min(prev, max);
-    });
-    setSelectedStructuredIndex((prev) => {
-      const max = Math.max(analysis?.structuredList.length ?? 0, 1) - 1;
-      return Math.min(prev, max);
-    });
-    setSelectedRelationIndex((prev) => {
-      const max = Math.max(analysis?.relationGraphList.length ?? 0, 1) - 1;
-      return Math.min(prev, max);
-    });
-  }, [analysis]);
+    const max = Math.max(ocrIds.length, 1) - 1;
+    setSelectedOcrIndex((prev) => Math.min(prev, max));
+  }, [ocrIds.length]);
 
-  const selectedOcr = analysis?.ocrList[selectedOcrIndex] ?? null;
-  const selectedStructured = analysis?.structuredList[selectedStructuredIndex] ?? null;
-  const selectedRelation = analysis?.relationGraphList[selectedRelationIndex] ?? null;
+  useEffect(() => {
+    const selectedOcrId = ocrIds[selectedOcrIndex];
 
-  async function doAction(action: () => Promise<void>, successText: string) {
+    if (!selectedOcrId) {
+      setSelectedOcr(null);
+      setStructuredIds([]);
+      setSelectedStructuredIndex(0);
+      return;
+    }
+
+    let active = true;
+
+    (async () => {
+      try {
+        const [ocrDetail, nextStructuredIds] = await Promise.all([
+          getOcrDetail(selectedOcrId),
+          getStructuredIdsByOcr(selectedOcrId),
+        ]);
+        if (!active) return;
+
+        setSelectedOcr(ocrDetail);
+        setStructuredIds(nextStructuredIds);
+        setSelectedStructuredIndex(nextStructuredIds.length ? nextStructuredIds.length - 1 : 0);
+      } catch (error) {
+        if (!active) return;
+        const message = error instanceof Error ? error.message : '加载OCR详情失败';
+        setErrorMessage(message);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [ocrIds, selectedOcrIndex]);
+
+  useEffect(() => {
+    const max = Math.max(structuredIds.length, 1) - 1;
+    setSelectedStructuredIndex((prev) => Math.min(prev, max));
+  }, [structuredIds.length]);
+
+  useEffect(() => {
+    const selectedStructuredId = structuredIds[selectedStructuredIndex];
+
+    if (!selectedStructuredId) {
+      setSelectedStructured(null);
+      setRelationGraphIds([]);
+      setSelectedRelationIndex(0);
+      return;
+    }
+
+    let active = true;
+
+    (async () => {
+      try {
+        const [structuredDetail, nextRelationIds] = await Promise.all([
+          getStructuredDetail(selectedStructuredId),
+          getRelationGraphIdsByStructured(selectedStructuredId),
+        ]);
+
+        if (!active) return;
+        setSelectedStructured(structuredDetail);
+        setRelationGraphIds(nextRelationIds);
+        setSelectedRelationIndex(nextRelationIds.length ? nextRelationIds.length - 1 : 0);
+      } catch (error) {
+        if (!active) return;
+        const message = error instanceof Error ? error.message : '加载结构化详情失败';
+        setErrorMessage(message);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [structuredIds, selectedStructuredIndex]);
+
+  useEffect(() => {
+    const max = Math.max(relationGraphIds.length, 1) - 1;
+    setSelectedRelationIndex((prev) => Math.min(prev, max));
+  }, [relationGraphIds.length]);
+
+  useEffect(() => {
+    const selectedRelationId = relationGraphIds[selectedRelationIndex];
+
+    if (!selectedRelationId) {
+      setSelectedRelation(null);
+      return;
+    }
+
+    let active = true;
+
+    (async () => {
+      try {
+        const relationDetail = await getRelationGraphDetail(selectedRelationId);
+        if (!active) return;
+        setSelectedRelation(relationDetail);
+      } catch (error) {
+        if (!active) return;
+        const message = error instanceof Error ? error.message : '加载关系图详情失败';
+        setErrorMessage(message);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [relationGraphIds, selectedRelationIndex]);
+
+  async function doAction(action: () => Promise<void>, successText: string, onSuccess?: () => Promise<void>) {
     setActionLoading(true);
     try {
       await action();
       toast.success('提示', successText);
-      await loadAnalysis(false);
+      if (onSuccess) {
+        await onSuccess();
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : '操作失败';
       toast.error('失败', message);
@@ -119,7 +238,11 @@ export default function ImageDetailScreen() {
 
   function handleTriggerOcr() {
     if (!Number.isFinite(imageId)) return;
-    doAction(() => triggerImageOcr(imageId), 'OCR任务已提交');
+    doAction(() => triggerImageOcr(imageId), 'OCR任务已提交', async () => {
+      const nextOcrIds = await getOcrIdsByImage(imageId);
+      setOcrIds(nextOcrIds);
+      setSelectedOcrIndex(nextOcrIds.length ? nextOcrIds.length - 1 : 0);
+    });
   }
 
   function handleTriggerStructured() {
@@ -128,7 +251,11 @@ export default function ImageDetailScreen() {
       return;
     }
 
-    doAction(() => triggerStructuredAnalysis(selectedOcr.id), '结构化任务已提交');
+    doAction(() => triggerStructuredAnalysis(selectedOcr.id), '结构化任务已提交', async () => {
+      const nextStructuredIds = await getStructuredIdsByOcr(selectedOcr.id);
+      setStructuredIds(nextStructuredIds);
+      setSelectedStructuredIndex(nextStructuredIds.length ? nextStructuredIds.length - 1 : 0);
+    });
   }
 
   function handleTriggerRelationGraph() {
@@ -137,7 +264,11 @@ export default function ImageDetailScreen() {
       return;
     }
 
-    doAction(() => triggerRelationGraphAnalysis(selectedStructured.id), '关系图任务已提交');
+    doAction(() => triggerRelationGraphAnalysis(selectedStructured.id), '关系图任务已提交', async () => {
+      const nextRelationIds = await getRelationGraphIdsByStructured(selectedStructured.id);
+      setRelationGraphIds(nextRelationIds);
+      setSelectedRelationIndex(nextRelationIds.length ? nextRelationIds.length - 1 : 0);
+    });
   }
 
   async function copyText(value: string, emptyHint: string) {
@@ -155,23 +286,30 @@ export default function ImageDetailScreen() {
     toast.success('提示', '已复制到剪贴板');
   }
 
+  async function copyStructuredValue(value: string) {
+    const text = value.trim();
+    if (!text) {
+      toast.warning('提示', '暂无可复制内容');
+      return;
+    }
+
+    if (Platform.OS === 'web' && globalThis.navigator?.clipboard) {
+      await globalThis.navigator.clipboard.writeText(text);
+    } else {
+      await Clipboard.setStringAsync(text);
+    }
+
+    const hint = text.length > 24 ? `${text.slice(0, 24)}...` : text;
+    toast.success('提示', `已复制“${hint}”`);
+  }
+
   function handleCopyOcr() {
     copyText(selectedOcr?.rawText ?? '', '暂无可复制的识别结果');
   }
 
-  function handleCopyStructured() {
-    copyText(
-      selectedStructured?.content ? JSON.stringify(selectedStructured.content, null, 2) : '',
-      '暂无可复制的分析结果'
-    );
-  }
-
-  function handleCopyRelation() {
-    copyText(
-      selectedRelation?.content ? JSON.stringify(selectedRelation.content, null, 2) : '',
-      '暂无可复制的关系图数据'
-    );
-  }
+  const translatedStructuredItems = useMemo<StructuredDisplayItem[]>(() => {
+    return toStructuredDisplayItems(selectedStructured?.content);
+  }, [selectedStructured?.content]);
 
   const imageHeight = Math.round(height * IMAGE_AREA_RATIO);
 
@@ -179,7 +317,7 @@ export default function ImageDetailScreen() {
     <ThemedView style={[styles.container, { backgroundColor: pageSurface }]}>
       <View style={[styles.imageArea, { height: imageHeight, backgroundColor: pageSurface }]}>
         <ImagePreviewPanel
-          imageUri={analysis?.imageDataUrl}
+          imageUri={imageDataUrl}
           loading={loading}
           onPressImage={() => setPreviewVisible(true)}
         />
@@ -197,7 +335,7 @@ export default function ImageDetailScreen() {
         {errorMessage ? (
           <View style={styles.centeredWrap}>
             <ThemedText style={styles.errorText}>{errorMessage}</ThemedText>
-            <Button variant="outline" size="sm" onPress={() => loadAnalysis()}>
+            <Button variant="outline" size="sm" onPress={() => loadBaseData()}>
               重试
             </Button>
           </View>
@@ -211,7 +349,7 @@ export default function ImageDetailScreen() {
             <ThemedText style={styles.blockText}>暂无识别结果，点击下方按钮进行识别</ThemedText>
           )}
           <ModuleActionBar
-            count={analysis?.ocrList.length ?? 0}
+            count={ocrIds.length}
             selectedIndex={selectedOcrIndex}
             onSelect={setSelectedOcrIndex}
             onCopy={handleCopyOcr}
@@ -222,16 +360,15 @@ export default function ImageDetailScreen() {
 
         <AnalysisSectionCard title="分析结果模块" defaultOpen>
           <ThemedText style={styles.statusText}>状态: {selectedStructured?.status ?? '暂无'}</ThemedText>
-          {selectedStructured?.content ? (
-            <StructuredContentList content={selectedStructured.content} />
+          {translatedStructuredItems.length ? (
+            <StructuredContentList items={translatedStructuredItems} onCopyValue={copyStructuredValue} />
           ) : (
             <ThemedText style={styles.blockText}>暂无分析结果，点击下方按钮进行分析</ThemedText>
           )}
           <ModuleActionBar
-            count={analysis?.structuredList.length ?? 0}
+            count={structuredIds.length}
             selectedIndex={selectedStructuredIndex}
             onSelect={setSelectedStructuredIndex}
-            onCopy={handleCopyStructured}
             onRefresh={handleTriggerStructured}
             disabled={actionLoading}
           />
@@ -241,10 +378,9 @@ export default function ImageDetailScreen() {
           <ThemedText style={styles.statusText}>状态: {selectedRelation?.status ?? '暂无'}</ThemedText>
           <RelationGraphPanel content={selectedRelation?.content} />
           <ModuleActionBar
-            count={analysis?.relationGraphList.length ?? 0}
+            count={relationGraphIds.length}
             selectedIndex={selectedRelationIndex}
             onSelect={setSelectedRelationIndex}
-            onCopy={handleCopyRelation}
             onRefresh={handleTriggerRelationGraph}
             disabled={actionLoading}
           />
@@ -253,7 +389,7 @@ export default function ImageDetailScreen() {
 
       <ZoomableImageModal
         visible={previewVisible}
-        imageUri={analysis?.imageDataUrl}
+        imageUri={imageDataUrl}
         onClose={() => setPreviewVisible(false)}
       />
     </ThemedView>
