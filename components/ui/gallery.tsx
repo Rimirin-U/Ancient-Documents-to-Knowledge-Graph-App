@@ -49,10 +49,13 @@ interface GalleryProps {
   enableZoom?: boolean;
   enableDownload?: boolean;
   enableShare?: boolean;
+  showThumbnails?: boolean;
+  scrollEnabled?: boolean;
   onItemPress?: (item: GalleryItem, index: number) => void;
   onDownload?: (item: GalleryItem) => void;
   onShare?: (item: GalleryItem) => void;
   renderCustomOverlay?: (item: GalleryItem, index: number) => React.ReactNode;
+  renderFullscreenTopLeft?: (item: GalleryItem, index: number) => React.ReactNode;
 }
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
@@ -400,10 +403,13 @@ export function Gallery({
   enableZoom = true,
   enableDownload = false,
   enableShare = false,
+  showThumbnails = true,
+  scrollEnabled = true,
   onItemPress,
   onDownload,
   onShare,
   renderCustomOverlay,
+  renderFullscreenTopLeft,
 }: GalleryProps) {
   // State for the currently selected image index in fullscreen mode
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
@@ -620,6 +626,12 @@ export function Gallery({
       <View style={styles.fullscreenControls} pointerEvents='box-none'>
         {/* Top controls (share, download, close) */}
         <View style={[styles.topControls, { backgroundColor }]}>
+          <View style={styles.topLeftControls}>
+            {currentItem && renderFullscreenTopLeft
+              ? renderFullscreenTopLeft(currentItem, selectedIndex)
+              : null}
+          </View>
+
           <View style={styles.topRightControls}>
             {enableDownload && onDownload && (
               <Button size='icon' variant='ghost' onPress={handleDownload}>
@@ -631,11 +643,10 @@ export function Gallery({
                 <Share size={24} color={primary} />
               </Button>
             )}
+            <Button size='icon' variant='ghost' onPress={closeFullscreen}>
+              <X size={26} color={primary} />
+            </Button>
           </View>
-
-          <Button size='icon' variant='ghost' onPress={closeFullscreen}>
-            <X size={26} color={primary} />
-          </Button>
         </View>
 
         {/* Bottom controls (page, title, description, thumbnails) */}
@@ -678,38 +689,40 @@ export function Gallery({
           )}
 
           {/* Horizontal FlatList for thumbnails */}
-          <FlatList
-            ref={thumbnailFlatListRef}
-            data={items}
-            renderItem={({ item, index }) => (
-              <Pressable
-                style={[
-                  styles.thumbnailItem,
-                  selectedIndex === index && {
-                    borderColor: secondary, // Highlight selected thumbnail
-                    borderWidth: 2,
-                  },
-                ]}
-                onPress={() => handleThumbnailPress(index)}
-              >
-                <Image
-                  source={{ uri: item.thumbnail || item.uri }}
-                  style={styles.thumbnailImage}
-                  contentFit='cover'
-                />
-              </Pressable>
-            )}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.thumbnailContainer}
-            ItemSeparatorComponent={() => <View style={{ width: 8 }} />} // Spacing between thumbnails
-            getItemLayout={(data, index) => ({
-              length: 48, // Fixed item length for layout calculation
-              offset: 56 * index, // Offset for each item (item length + separator width)
-              index,
-            })}
-          />
+          {showThumbnails ? (
+            <FlatList
+              ref={thumbnailFlatListRef}
+              data={items}
+              renderItem={({ item, index }) => (
+                <Pressable
+                  style={[
+                    styles.thumbnailItem,
+                    selectedIndex === index && {
+                      borderColor: secondary, // Highlight selected thumbnail
+                      borderWidth: 2,
+                    },
+                  ]}
+                  onPress={() => handleThumbnailPress(index)}
+                >
+                  <Image
+                    source={{ uri: item.thumbnail || item.uri }}
+                    style={styles.thumbnailImage}
+                    contentFit='cover'
+                  />
+                </Pressable>
+              )}
+              keyExtractor={(item) => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.thumbnailContainer}
+              ItemSeparatorComponent={() => <View style={{ width: 8 }} />} // Spacing between thumbnails
+              getItemLayout={(data, index) => ({
+                length: 48, // Fixed item length for layout calculation
+                offset: 56 * index, // Offset for each item (item length + separator width)
+                index,
+              })}
+            />
+          ) : null}
         </View>
       </View>
     );
@@ -729,20 +742,29 @@ export function Gallery({
   return (
     // GestureHandlerRootView is required for React Native Gesture Handler to work
     <GestureHandlerRootView style={{ flex: 1 }}>
-      {/* ScrollView for the main gallery grid */}
-      <ScrollView
-        style={[styles.container, { backgroundColor }]}
-        contentContainerStyle={[styles.grid, { gap: spacing }]}
-        showsVerticalScrollIndicator={false}
-        // Measure the container width on layout to calculate item widths dynamically
-        onLayout={(event) => {
-          const { width } = event.nativeEvent.layout;
-          setContainerWidth(width);
-        }}
-      >
-        {/* Render each gallery item */}
-        {items.map((item, index) => renderGalleryItem({ item, index }))}
-      </ScrollView>
+      {scrollEnabled ? (
+        <ScrollView
+          style={[styles.container, { backgroundColor }]}
+          contentContainerStyle={[styles.grid, { gap: spacing }]}
+          showsVerticalScrollIndicator={false}
+          onLayout={(event) => {
+            const { width } = event.nativeEvent.layout;
+            setContainerWidth(width);
+          }}
+        >
+          {items.map((item, index) => renderGalleryItem({ item, index }))}
+        </ScrollView>
+      ) : (
+        <View
+          style={[styles.container, styles.grid, { backgroundColor, gap: spacing }]}
+          onLayout={(event) => {
+            const { width } = event.nativeEvent.layout;
+            setContainerWidth(width);
+          }}
+        >
+          {items.map((item, index) => renderGalleryItem({ item, index }))}
+        </View>
+      )}
 
       {/* Modal for fullscreen image view */}
       <Modal
@@ -843,6 +865,12 @@ const styles = StyleSheet.create({
   topRightControls: {
     gap: 8,
     flexDirection: 'row',
+    alignItems: 'center',
+  },
+  topLeftControls: {
+    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   bottomControls: {
     position: 'absolute',

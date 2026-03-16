@@ -265,6 +265,16 @@ export default function RecordScreen() {
     });
   }
 
+  function handleOpenCrossDocDetail(item: CrossDocRecordItem) {
+    router.push({
+      pathname: '/cross-doc-detail' as any,
+      params: {
+        taskId: String(item.id),
+        title: item.title,
+      },
+    });
+  }
+
   function renderImageList() {
     if (loading) {
       return (
@@ -346,6 +356,7 @@ export default function RecordScreen() {
             selectable={selectMode}
             selected={selectedSet.has(item.id)}
             onToggleSelect={toggleSelect}
+            onPress={handleOpenCrossDocDetail}
           />
         )}
         ListEmptyComponent={
