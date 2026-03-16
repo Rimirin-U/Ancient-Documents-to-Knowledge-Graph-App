@@ -154,13 +154,13 @@ export function BottomSheet({
     if (isVisible) {
       setModalVisible(true);
       translateY.value = withSpring(defaultHeight, {
-        damping: 50,
+        damping: 60,
         stiffness: 400,
       });
       opacity.value = withTiming(1, { duration: 300 });
       currentSnapIndex.value = 0;
     } else {
-      translateY.value = withSpring(0, { damping: 50, stiffness: 400 });
+      translateY.value = withSpring(0, { damping: 60, stiffness: 400 });
       opacity.value = withTiming(0, { duration: 300 }, (finished) => {
         if (finished) {
           runOnJS(setModalVisible)(false);
@@ -172,7 +172,7 @@ export function BottomSheet({
   // Function to animate the sheet to a specific destination
   const scrollTo = (destination: number) => {
     'worklet';
-    translateY.value = withSpring(destination, { damping: 50, stiffness: 400 });
+    translateY.value = withSpring(destination, { damping: 60, stiffness: 400 });
   };
 
   // --- START: NEW KEYBOARD HANDLING LOGIC ---
@@ -228,7 +228,7 @@ export function BottomSheet({
 
   const animateClose = () => {
     'worklet';
-    translateY.value = withSpring(0, { damping: 50, stiffness: 400 });
+    translateY.value = withSpring(0, { damping: 60, stiffness: 400 });
     opacity.value = withTiming(0, { duration: 300 }, (finished) => {
       if (finished) {
         runOnJS(onClose)();

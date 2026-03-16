@@ -30,7 +30,7 @@ export function ImageInfoSheet({
   onPressDownload,
 }: ImageInfoSheetProps) {
   return (
-    <BottomSheet isVisible={visible} onClose={onClose} snapPoints={[0.5, 0.8]}>
+    <BottomSheet isVisible={visible} onClose={onClose} snapPoints={[0.7]}>
       {imageInfo ? (
         <View style={styles.container}>
           {imageInfo.imageDataUrl ? (
