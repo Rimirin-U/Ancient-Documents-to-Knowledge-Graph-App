@@ -1,6 +1,6 @@
 // services/auth.ts
 // 用户认证相关 API 调用，Token 管理
-import * as SecureStore from 'expo-secure-store';
+import { getStorageItem, setStorageItem, removeStorageItem } from './storage';
 import { API_BASE_URL } from './api';
 
 const TOKEN_KEY = 'auth_token';
@@ -9,13 +9,13 @@ const TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // 获取当前存储的 Token
 export async function getToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(TOKEN_KEY);
+  return getStorageItem(TOKEN_KEY);
 }
 
 // 检查 Token 是否存在且未过期
 export async function isTokenValid(): Promise<boolean> {
-  const token = await SecureStore.getItemAsync(TOKEN_KEY);
-  const expiresAt = await SecureStore.getItemAsync(EXPIRES_KEY);
+  const token = await getStorageItem(TOKEN_KEY);
+  const expiresAt = await getStorageItem(EXPIRES_KEY);
   if (!token || !expiresAt) return false;
   return Date.now() < parseInt(expiresAt, 10);
 }
@@ -23,14 +23,14 @@ export async function isTokenValid(): Promise<boolean> {
 // 保存 Token 和过期时间
 async function saveToken(token: string): Promise<void> {
   const expiresAt = (Date.now() + TOKEN_TTL_MS).toString();
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
-  await SecureStore.setItemAsync(EXPIRES_KEY, expiresAt);
+  await setStorageItem(TOKEN_KEY, token);
+  await setStorageItem(EXPIRES_KEY, expiresAt);
 }
 
 // 清除 Token 和过期时间
 async function clearToken(): Promise<void> {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
-  await SecureStore.deleteItemAsync(EXPIRES_KEY);
+  await removeStorageItem(TOKEN_KEY);
+  await removeStorageItem(EXPIRES_KEY);
 }
 
 // 登录接口

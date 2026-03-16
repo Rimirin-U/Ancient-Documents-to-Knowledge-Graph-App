@@ -14,9 +14,7 @@ npx expo start
 
 在`services/api.ts`中更改API基础URL。
 
-通过Expo Go App扫描二维码在真机上预览。
-
-**暂不支持web** 按 `w` 在浏览器中打开。
+通过Expo Go App扫描二维码在真机上预览；按 `w` 在浏览器中打开。
 
 ## ECharts相关
 

@@ -148,12 +148,27 @@ export default function RecordScreen() {
     navigation.setOptions({
       title: '记录',
       headerRight: () => (
-        <Pressable onPress={openHeaderMenu} hitSlop={10} style={styles.headerMenuButton}>
-          <MaterialIcons name="menu" size={26} color={textColor} />
-        </Pressable>
+        <View style={styles.headerRightContainer}>
+          <Pressable
+            onPress={() => {
+              if (currentView === 'image') {
+                fetchImageRecords(true);
+              } else {
+                fetchCrossDocRecords(true);
+              }
+            }}
+            hitSlop={10}
+            style={styles.headerButton}
+          >
+            <MaterialIcons name="refresh" size={24} color={textColor} />
+          </Pressable>
+          <Pressable onPress={openHeaderMenu} hitSlop={10} style={styles.headerButton}>
+            <MaterialIcons name="menu" size={26} color={textColor} />
+          </Pressable>
+        </View>
       ),
     });
-  }, [navigation, textColor, currentView, openHeaderMenu]);
+  }, [navigation, textColor, currentView, openHeaderMenu, fetchImageRecords, fetchCrossDocRecords]);
 
   function setSelectModeWithReset(next: boolean) {
     setSelectMode(next);
@@ -422,8 +437,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerMenuButton: {
-    paddingHorizontal: 6,
+  headerRightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginRight: 6,
+  },
+  headerButton: {
+    padding: 6,
   },
   centered: {
     flex: 1,

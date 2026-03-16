@@ -9,13 +9,16 @@ import { Colors } from '@/theme/colors';
 import { useAuth } from '@/context/auth-context';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { getMe, UserInfo } from '@/services/user';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useRouter, useNavigation } from 'expo-router';
+import { useEffect, useState, useLayoutEffect } from 'react';
 import {
   ScrollView,
   StyleSheet,
   View,
+  RefreshControl,
+  Pressable,
 } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
@@ -24,27 +27,52 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { logout } = useAuth();
   const router = useRouter();
+  const navigation = useNavigation();
   const toast = useToast();
+  const textColor = colors.text;
 
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loadingInfo, setLoadingInfo] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [logoutDialogVisible, setLogoutDialogVisible] = useState(false);
 
   useEffect(() => {
     fetchUser();
   }, []);
 
-  async function fetchUser() {
-    setLoadingInfo(true);
+  async function fetchUser(isRefresh?: boolean) {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoadingInfo(true);
+    }
     try {
       const info = await getMe();
       setUserInfo(info);
     } catch (e: any) {
       toast.error('错误', e.message ?? '获取用户信息失败');
     } finally {
-      setLoadingInfo(false);
+      if (isRefresh) {
+        setRefreshing(false);
+      } else {
+        setLoadingInfo(false);
+      }
     }
   }
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Pressable
+          onPress={() => fetchUser(true)}
+          hitSlop={10}
+          style={styles.headerButton}
+        >
+          <MaterialIcons name="refresh" size={24} color={textColor} />
+        </Pressable>
+      ),
+    });
+  }, [textColor, navigation]);
 
   function handleLogout() {
     setLogoutDialogVisible(true);
@@ -62,7 +90,16 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchUser(true)}
+            tintColor={textColor}
+          />
+        }
+      >
         {userInfo && (
           <Card style={styles.card}>
             <InfoRow label="用户名" value={userInfo.username} colors={colors} />
@@ -132,6 +169,10 @@ function InfoRow({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  headerButton: {
+    padding: 6,
+    marginRight: 6,
+  },
   content: {
     padding: 24,
     gap: 16,
