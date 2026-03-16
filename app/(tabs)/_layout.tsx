@@ -28,6 +28,14 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="qa-chat"
+        options={{
+          title: '问答',
+          headerShown: true,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="info.bubble.fill" color={color} />
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: '个人',
