@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Image } from '@/components/ui/image';
 import { ThemedText } from '@/components/themed-text';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Card } from '@/components/ui/card';
+import { ZoomableImageModal } from '@/components/image-detail/zoomable-image-modal';
 import { FileText, Eye } from 'lucide-react-native';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 export type CrossDocImageDetailInfo = {
   id: number;
@@ -29,57 +31,69 @@ export function ImageInfoSheet({
   onPressDetail,
   onPressDownload,
 }: ImageInfoSheetProps) {
+  const [previewVisible, setPreviewVisible] = useState(false);
+
   return (
-    <BottomSheet isVisible={visible} onClose={onClose} snapPoints={[0.7]}>
-      {imageInfo ? (
-        <View style={styles.container}>
-          {imageInfo.imageDataUrl ? (
-            <View style={styles.imageWrap}>
-              <Image
-                source={{ uri: imageInfo.imageDataUrl }}
-                contentFit="cover"
+    <>
+      <BottomSheet isVisible={visible} onClose={onClose} snapPoints={[0.7]}>
+        {imageInfo ? (
+          <View style={styles.container}>
+            {imageInfo.imageDataUrl ? (
+              <Pressable onPress={() => setPreviewVisible(true)}>
+                <View style={styles.imageWrap}>
+                  <Image
+                    source={{ uri: imageInfo.imageDataUrl }}
+                    contentFit="cover"
+                    variant="default"
+                    style={styles.image}
+                  />
+                </View>
+              </Pressable>
+            ) : null}
+
+            <Card style={styles.infoCard}>
+              <View style={styles.row}>
+                <ThemedText style={styles.label}>标题</ThemedText>
+                <ThemedText style={styles.value}>{imageInfo.title || '-'}</ThemedText>
+              </View>
+              <View style={styles.row}>
+                <ThemedText style={styles.label}>文件名</ThemedText>
+                <ThemedText style={styles.value}>{imageInfo.filename || '-'}</ThemedText>
+              </View>
+              <View style={[styles.row, styles.lastRow]}>
+                <ThemedText style={styles.label}>上传时间</ThemedText>
+                <ThemedText style={styles.value}>{imageInfo.uploadTime || '-'}</ThemedText>
+              </View>
+            </Card>
+
+            <View style={styles.actions}>
+              <Button
                 variant="default"
-                style={styles.image}
-              />
+                icon={Eye}
+                onPress={() => onPressDetail?.(imageInfo)}
+                style={styles.actionButton}
+                textStyle={styles.buttonText}
+              >详情</Button>
+              <Button
+                variant="outline"
+                icon={FileText}
+                onPress={() => onPressDownload?.(imageInfo)}
+                style={styles.actionButton}
+                textStyle={styles.buttonText}
+              >保存</Button>
             </View>
-          ) : null}
-
-          <Card style={styles.infoCard}>
-            <View style={styles.row}>
-              <ThemedText style={styles.label}>标题</ThemedText>
-              <ThemedText style={styles.value}>{imageInfo.title || '-'}</ThemedText>
-            </View>
-            <View style={styles.row}>
-              <ThemedText style={styles.label}>文件名</ThemedText>
-              <ThemedText style={styles.value}>{imageInfo.filename || '-'}</ThemedText>
-            </View>
-            <View style={[styles.row, styles.lastRow]}>
-              <ThemedText style={styles.label}>上传时间</ThemedText>
-              <ThemedText style={styles.value}>{imageInfo.uploadTime || '-'}</ThemedText>
-            </View>
-          </Card>
-
-          <View style={styles.actions}>
-            <Button
-              variant="default"
-              icon={Eye}
-              onPress={() => onPressDetail?.(imageInfo)}
-              style={styles.actionButton}
-              textStyle={styles.buttonText}
-            >详情</Button>
-            <Button
-              variant="outline"
-              icon={FileText}
-              onPress={() => onPressDownload?.(imageInfo)}
-              style={styles.actionButton}
-              textStyle={styles.buttonText}
-            >保存</Button>
           </View>
-        </View>
-      ) : (
-        <ThemedText>暂无图片详细信息</ThemedText>
-      )}
-    </BottomSheet>
+        ) : (
+          <ThemedText>暂无图片详细信息</ThemedText>
+        )}
+      </BottomSheet>
+
+      <ZoomableImageModal
+        visible={previewVisible}
+        imageUri={imageInfo?.imageDataUrl}
+        onClose={() => setPreviewVisible(false)}
+      />
+    </>
   );
 }
 

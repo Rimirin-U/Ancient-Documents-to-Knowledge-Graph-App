@@ -16,7 +16,7 @@ export function ImagePreviewPanel({ imageUri, loading, onPressImage }: ImagePrev
     <View style={[styles.container, { backgroundColor: surface }]}> 
       {imageUri ? (
         <Pressable style={styles.imageWrap} onPress={onPressImage}>
-          <Image source={{ uri: imageUri }} contentFit="contain" variant="default" style={styles.image} />
+          <Image source={{ uri: imageUri }} contentFit="contain" variant="default" style={styles.image} containerStyle={{ backgroundColor: surface }} />
         </Pressable>
       ) : (
         <View style={styles.placeholder}>

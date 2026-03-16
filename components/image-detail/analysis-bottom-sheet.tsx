@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     overflow: 'hidden',
   },
   handleZone: {
