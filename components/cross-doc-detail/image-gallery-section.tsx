@@ -1,30 +1,27 @@
 import { CrossDocImageDetailInfo } from '@/components/cross-doc-detail/image-info-sheet';
 import { AnalysisSectionCard } from '@/components/image-detail/analysis-section-card';
 import { Gallery, GalleryItem } from '@/components/ui/gallery';
-import { Button } from '@/components/ui/button';
 import { ThemedText } from '@/components/themed-text';
-import { Download, Info } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 export type CrossDocImageGalleryItem = CrossDocImageDetailInfo & {
-  imageDataUrl: string;
+  imageDataUrl?: string;
 };
 
 type ImageGallerySectionProps = {
   images: CrossDocImageGalleryItem[];
-  onPressImageDetail: (image: CrossDocImageGalleryItem) => void;
-  onPressImageDownload: (image: CrossDocImageGalleryItem) => void;
+  onPressImage: (image: CrossDocImageGalleryItem) => void;
 };
 
 export function ImageGallerySection({
   images,
-  onPressImageDetail,
-  onPressImageDownload,
+  onPressImage,
 }: ImageGallerySectionProps) {
-  const items: GalleryItem[] = images.map((item) => ({
+  const validImages = images.filter((item) => item.imageDataUrl);
+  const items: GalleryItem[] = validImages.map((item) => ({
     id: String(item.id),
-    uri: item.imageDataUrl,
-    thumbnail: item.imageDataUrl,
+    uri: item.imageDataUrl!,
+    thumbnail: item.imageDataUrl!,
     title: item.title,
   }));
 
@@ -38,35 +35,17 @@ export function ImageGallerySection({
             spacing={8}
             aspectRatio={1}
             borderRadius={10}
+            galleryBackgroundColor="transparent"
             showTitles={false}
             showDescriptions={false}
             showPages={false}
-            showThumbnails={false}
+            enableFullscreen={false}
             scrollEnabled={false}
-            enableFullscreen
-            enableZoom
-            renderFullscreenTopLeft={(item) => {
-              const current = images.find((image) => String(image.id) === item.id);
-              if (!current) {
-                return null;
+            onItemPress={(item) => {
+              const current = validImages.find((image) => String(image.id) === item.id);
+              if (current) {
+                onPressImage(current);
               }
-
-              return (
-                <>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    icon={Info}
-                    onPress={() => onPressImageDetail(current)}
-                  />
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    icon={Download}
-                    onPress={() => onPressImageDownload(current)}
-                  />
-                </>
-              );
             }}
           />
         </View>

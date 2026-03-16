@@ -51,6 +51,7 @@ interface GalleryProps {
   enableShare?: boolean;
   showThumbnails?: boolean;
   scrollEnabled?: boolean;
+  galleryBackgroundColor?: string;
   onItemPress?: (item: GalleryItem, index: number) => void;
   onDownload?: (item: GalleryItem) => void;
   onShare?: (item: GalleryItem) => void;
@@ -405,6 +406,7 @@ export function Gallery({
   enableShare = false,
   showThumbnails = true,
   scrollEnabled = true,
+  galleryBackgroundColor,
   onItemPress,
   onDownload,
   onShare,
@@ -430,6 +432,7 @@ export function Gallery({
   const mutedColor = useColor('textMuted');
   const backgroundColor = useColor('background');
   const secondary = useColor('secondary');
+  const gridBackgroundColor = galleryBackgroundColor ?? backgroundColor;
 
   // Calculate item width for the grid based on container width, columns, and spacing
   const itemWidth = (containerWidth - spacing * (columns - 1)) / columns;
@@ -744,7 +747,7 @@ export function Gallery({
     <GestureHandlerRootView style={{ flex: 1 }}>
       {scrollEnabled ? (
         <ScrollView
-          style={[styles.container, { backgroundColor }]}
+          style={[styles.container, { backgroundColor: gridBackgroundColor }]}
           contentContainerStyle={[styles.grid, { gap: spacing }]}
           showsVerticalScrollIndicator={false}
           onLayout={(event) => {
@@ -756,7 +759,7 @@ export function Gallery({
         </ScrollView>
       ) : (
         <View
-          style={[styles.container, styles.grid, { backgroundColor, gap: spacing }]}
+          style={[styles.container, styles.grid, { backgroundColor: gridBackgroundColor, gap: spacing }]}
           onLayout={(event) => {
             const { width } = event.nativeEvent.layout;
             setContainerWidth(width);

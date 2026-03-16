@@ -32,12 +32,13 @@ import {
   triggerMultiRelationGraphAnalysis,
 } from '@/services/cross-doc';
 import * as Clipboard from 'expo-clipboard';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 export default function CrossDocDetailScreen() {
   const navigation = useNavigation();
+  const router = useRouter();
   const params = useLocalSearchParams<{ taskId?: string; title?: string }>();
   const toast = useToast();
 
@@ -182,12 +183,23 @@ export default function CrossDocDetailScreen() {
     }
   }
 
-  function handleOpenImageInfo(image: CrossDocImageGalleryItem) {
+  function handleImagePressed(image: CrossDocImageGalleryItem) {
     setSelectedInfoImage(image);
     setInfoSheetVisible(true);
   }
 
-  function handleDownloadImage(image: CrossDocImageGalleryItem) {
+  function handleImageDetail(image: CrossDocImageGalleryItem) {
+    setInfoSheetVisible(false);
+    router.push({
+      pathname: '/image-detail' as any,
+      params: {
+        imageId: String(image.id),
+        title: image.title,
+      },
+    });
+  }
+
+  function handleImageDownload(image: CrossDocImageGalleryItem) {
     toast.info('下载', `已选择下载：${image.title}`);
   }
 
@@ -215,8 +227,7 @@ export default function CrossDocDetailScreen() {
         <ScrollView contentContainerStyle={styles.contentWrap}>
           <ImageGallerySection
             images={images}
-            onPressImageDetail={handleOpenImageInfo}
-            onPressImageDownload={handleDownloadImage}
+            onPressImage={handleImagePressed}
           />
 
           <AnalysisSectionCard title="分析结果" defaultOpen>
@@ -253,6 +264,8 @@ export default function CrossDocDetailScreen() {
         visible={infoSheetVisible}
         imageInfo={selectedInfoImage}
         onClose={() => setInfoSheetVisible(false)}
+        onPressDetail={handleImageDetail}
+        onPressDownload={handleImageDownload}
       />
     </ThemedView>
   );

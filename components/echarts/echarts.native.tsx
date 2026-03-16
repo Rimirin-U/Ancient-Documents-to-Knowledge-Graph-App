@@ -4,7 +4,7 @@ import { WebView } from "react-native-webview";
 import { getChartHtml } from "./echartsHtml";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const E_HEIGHT = 450;
+const E_HEIGHT = 400;
 
 export function Chart({ option, onGesture, theme }: 
   { option: any, onGesture: (isBusy: boolean) => void, theme: 'light'|'dark' }) {
@@ -26,7 +26,6 @@ export function Chart({ option, onGesture, theme }:
 
   return (
     <View style={{
-      width: SCREEN_WIDTH - 32,
       height: E_HEIGHT,
       borderRadius: 16,
       overflow: 'hidden',
