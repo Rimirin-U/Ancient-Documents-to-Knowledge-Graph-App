@@ -14,7 +14,13 @@ export function Chart({ option, onGesture, theme }:
 
   // on option change
   useEffect(() => {
-    const script = `setChartOption(${JSON.stringify(option)}, '${theme}')`;
+    // 规范化选项格式
+    const normalizedOption = { ...option };
+    if (Array.isArray(normalizedOption.legend)) {
+      normalizedOption.legend = normalizedOption.legend[0] || {};
+    }
+    
+    const script = `setChartOption(${JSON.stringify(normalizedOption)}, '${theme}')`;
     webViewRef.current?.injectJavaScript(script);
   }, [option, theme]);
 

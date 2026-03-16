@@ -13,9 +13,15 @@ export function Chart({ option, onGesture, theme }:
   useEffect(() => {
     if (!iframeRef.current?.contentWindow) return;
     
+    // 规范化选项格式
+    const normalizedOption = { ...option };
+    if (Array.isArray(normalizedOption.legend)) {
+      normalizedOption.legend = normalizedOption.legend[0] || {};
+    }
+    
     const message = {
       type: 'updateChart',
-      option: option,
+      option: normalizedOption,
       theme: theme
     };
     iframeRef.current.contentWindow.postMessage(JSON.stringify(message), '*');

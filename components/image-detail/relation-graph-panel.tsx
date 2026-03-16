@@ -16,12 +16,29 @@ function toGraphContent(content: unknown): GraphContent | null {
   if (!content || typeof content !== 'object') return null;
 
   const candidate = content as Record<string, unknown>;
-  const nodes = Array.isArray(candidate.nodes) ? candidate.nodes : [];
-  const links = Array.isArray(candidate.links) ? candidate.links : [];
+  
+  let nodes: any[] = [];
+  let links: any[] = [];
+  let categoriesSource: any[] = [];
+
+  // 兼容 - 直接结构{nodes, links, categories}
+  if (Array.isArray(candidate.nodes)) {
+    nodes = candidate.nodes;
+    links = Array.isArray(candidate.links) ? candidate.links : [];
+    categoriesSource = Array.isArray(candidate.categories) ? candidate.categories : [];
+  } 
+  // 标准结构 - ECharts 格式
+  else if (Array.isArray(candidate.series) && candidate.series.length > 0) {
+    const graphSeries = (candidate.series as any[]).find((s) => s.type === 'graph');
+    if (graphSeries) {
+      nodes = Array.isArray(graphSeries.data) ? graphSeries.data : [];
+      links = Array.isArray(graphSeries.links) ? graphSeries.links : [];
+      categoriesSource = Array.isArray(graphSeries.categories) ? graphSeries.categories : [];
+    }
+  }
 
   if (!nodes.length) return null;
 
-  const categoriesSource = Array.isArray(candidate.categories) ? candidate.categories : [];
   const categories =
     categoriesSource.length > 0
       ? (categoriesSource as { name: string }[])

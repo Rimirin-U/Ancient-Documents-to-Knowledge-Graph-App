@@ -1,4 +1,13 @@
 export function getChartHtml(option: any, theme: 'light'|'dark') {
+  // 确保legend是对象，不是数组
+  const normalizedOption = { ...option };
+  if (Array.isArray(normalizedOption.legend)) {
+    normalizedOption.legend = normalizedOption.legend[0] || {};
+  }
+
+  // 使用window.__ECHARTS_OPTION__来传递数据，避免字符串拼接中文问题
+  const optionStr = JSON.stringify(normalizedOption);
+  
   return `
   <!DOCTYPE html>
   <html>
@@ -22,6 +31,7 @@ export function getChartHtml(option: any, theme: 'light'|'dark') {
       <script>
         var myChart = null;
         var currentTheme = '${theme}';
+        window.__ECHARTS_OPTION__ = ${optionStr};
 
         function initChart(newTheme) {
           if (myChart) {
@@ -49,12 +59,18 @@ export function getChartHtml(option: any, theme: 'light'|'dark') {
             initChart(currentTheme);
           }
           if (!myChart) initChart(currentTheme);
+          
+          // 规范化legend格式
+          if (Array.isArray(option.legend)) {
+            option.legend = option.legend[0] || {};
+          }
+          
           myChart.setOption(option);
         }
         
         // 首次初始化
         initChart(currentTheme);
-        setChartOption(${JSON.stringify(option)});
+        setChartOption(window.__ECHARTS_OPTION__);
 
         // 响应窗口大小变化
         window.addEventListener('resize', function() {
