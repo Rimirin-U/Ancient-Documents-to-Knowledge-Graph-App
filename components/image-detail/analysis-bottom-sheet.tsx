@@ -111,8 +111,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
-    borderTopWidth: 0,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -1 },
+    shadowOpacity: 0.50,
+    shadowRadius: 2,
+    elevation: 3,
   },
   handleZone: {
     paddingTop: 12,
