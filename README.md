@@ -16,6 +16,18 @@ npx expo start
 
 通过Expo Go App扫描二维码在真机上预览；按 `w` 在浏览器中打开。
 
+## 打包
+
+```bash
+npx eas build -p android
+```
+
+需要：
+
+```bash
+npm install -g eas-cli
+```
+
 ## ECharts相关
 
 图表组件位于 `components/echarts/`，对外暴露统一的 `<Chart>` 组件，平台自动适配：移动端（Native）基于 `WebView` 渲染，Web端基于 `iframe` 渲染。

@@ -1,4 +1,4 @@
-import { API_BASE_URL, authHeaders } from './api';
+import { API_BASE_URL, authHeaders } from './http';
 
 export type RecordImageItem = {
   id: number;

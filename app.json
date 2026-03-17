@@ -1,25 +1,23 @@
 {
   "expo": {
-    "name": "testapp",
-    "slug": "testapp",
-    "version": "1.0.0",
+    "name": "文渊智图",
+    "slug": "wenyuan-graph",
+    "version": "0.1.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "testapp",
+    "icon": "./assets/images/app-icon.jpg",
+    "scheme": "wenyuan-graph",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wenyuangraph.app"
     },
     "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
+      "icon": "./assets/images/app-icon.jpg",
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.wenyuangraph.app",
+      "usesCleartextTraffic": true
     },
     "web": {
       "output": "static",
@@ -44,6 +42,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "33580eb2-1e00-4b29-b131-38e4effce71e"
+      }
     }
   }
 }

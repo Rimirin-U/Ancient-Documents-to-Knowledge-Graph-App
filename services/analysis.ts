@@ -1,7 +1,7 @@
 // services/analysis.ts
 // 图像分析相关 API 调用
 import { Platform } from 'react-native';
-import { API_BASE_URL, authHeaders } from './api';
+import { API_BASE_URL, authHeaders } from './http';
 
 type ApiErrorShape = {
   detail?: string;

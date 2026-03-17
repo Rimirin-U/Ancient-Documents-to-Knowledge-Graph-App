@@ -1,7 +1,7 @@
 // services/auth.ts
 // 用户认证相关 API 调用，Token 管理
 import { getStorageItem, setStorageItem, removeStorageItem } from './storage';
-import { API_BASE_URL } from './api';
+import { API_BASE_URL } from './constants';
 
 const TOKEN_KEY = 'auth_token';
 const EXPIRES_KEY = 'auth_expires_at';
