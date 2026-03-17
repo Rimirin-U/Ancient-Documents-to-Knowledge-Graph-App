@@ -203,22 +203,6 @@ export default function CrossDocDetailScreen() {
     toast.info('下载', `已选择下载：${image.title}`);
   }
 
-  var temp = (<AnalysisSectionCard title="分析结果" defaultOpen>
-            <ThemedText style={styles.statusText}>状态: {selectedStructured?.status ?? '暂无'}</ThemedText>
-            {translatedStructuredItems.length ? (
-              <StructuredContentList items={translatedStructuredItems} onCopyValue={copyStructuredValue} />
-            ) : (
-              <ThemedText style={styles.blockText}>暂无分析结果</ThemedText>
-            )}
-            <ModuleActionBar
-              count={structuredList.length}
-              selectedIndex={selectedStructuredIndex}
-              onSelect={setSelectedStructuredIndex}
-              onRefresh={() => loadData(false)}
-              disabled={actionLoading}
-            />
-          </AnalysisSectionCard>);
-
   return (
     <ThemedView style={[styles.container, { backgroundColor: pageBg }]}>
       {loading ? (
@@ -245,6 +229,22 @@ export default function CrossDocDetailScreen() {
             images={images}
             onPressImage={handleImagePressed}
           />
+
+          <AnalysisSectionCard title="文档结构化分析" defaultOpen>
+            <ThemedText style={styles.statusText}>状态: {selectedStructured?.status ?? '暂无'}</ThemedText>
+            {translatedStructuredItems.length ? (
+              <StructuredContentList items={translatedStructuredItems} onCopyValue={copyStructuredValue} />
+            ) : (
+              <ThemedText style={styles.blockText}>暂无分析结果</ThemedText>
+            )}
+            <ModuleActionBar
+              count={structuredList.length}
+              selectedIndex={selectedStructuredIndex}
+              onSelect={setSelectedStructuredIndex}
+              onRefresh={() => loadData(false)}
+              disabled={actionLoading}
+            />
+          </AnalysisSectionCard>
 
           <AnalysisSectionCard title="跨文档关系图谱" defaultOpen>
             <ThemedText style={styles.statusText}>状态: {selectedRelation?.status ?? '暂无'}</ThemedText>
