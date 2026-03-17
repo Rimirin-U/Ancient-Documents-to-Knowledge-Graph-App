@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import { Colors } from '@/theme/colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -32,7 +33,7 @@ export default function TabLayout() {
         options={{
           title: '问答',
           headerShown: true,
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="info.bubble.fill" color={color} />
+          tabBarIcon: ({ color }) => <MaterialIcons size={24} name="help-outline" color={color} />
         }}
       />
       <Tabs.Screen

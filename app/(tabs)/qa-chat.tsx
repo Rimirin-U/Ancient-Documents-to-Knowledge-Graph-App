@@ -1,12 +1,18 @@
 import { useToast } from '@/components/ui/toast';
+import { useActionSheet } from '@/components/ui/action-sheet';
+import { AvoidKeyboard } from '@/components/ui/avoid-keyboard';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { Card } from '@/components/ui/card';
 import { useColor } from '@/hooks/useColor';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { querySmartChat } from '@/services/chat';
 import { getStorageItem, setStorageItem } from '@/services/storage';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Bubble, GiftedChat, IMessage } from 'react-native-gifted-chat';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useNavigation } from 'expo-router';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Bubble, GiftedChat, IMessage, Send } from 'react-native-gifted-chat';
 
 type ChatSession = {
   id: string;
@@ -88,6 +94,8 @@ function makeSessionTitle(question: string): string {
 
 export default function QaChatScreen() {
   const toast = useToast();
+  const navigation = useNavigation();
+  const { show: showActionSheet, ActionSheet: SessionActionSheet } = useActionSheet();
   const headerHeight = useHeaderHeight();
   const colorScheme = useColorScheme() ?? 'light';
   const backgroundColor = useColor('background');
@@ -101,7 +109,7 @@ export default function QaChatScreen() {
   const [activeSessionId, setActiveSessionId] = useState<string>('');
   const [isReady, setIsReady] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
+  const [historySheetVisible, setHistorySheetVisible] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -178,28 +186,94 @@ export default function QaChatScreen() {
     setSessions((prev) => [fresh, ...prev]);
     setActiveSessionId(fresh.id);
     setIsTyping(false);
-    setShowHistory(false);
+    setHistorySheetVisible(false);
   }, []);
 
-  const toggleHistory = useCallback(() => {
-    if (sessions.length <= 1) {
-      toast.info('暂无更多会话', '先发起几次问答再查看历史');
-      return;
-    }
+  const openHistorySheet = useCallback(() => {
+    setHistorySheetVisible(true);
+  }, []);
 
-    setShowHistory((prev) => !prev);
-  }, [sessions, activeSessionId, toast]);
+  const closeHistorySheet = useCallback(() => {
+    setHistorySheetVisible(false);
+  }, []);
 
   const selectSession = useCallback((sessionId: string) => {
     setActiveSessionId(sessionId);
-    setShowHistory(false);
+    setHistorySheetVisible(false);
   }, []);
+
+  const deleteSession = useCallback(
+    (sessionId: string) => {
+      if (!sessions.some((session) => session.id === sessionId)) return;
+
+      let nextActiveId: string | null = null;
+
+      setSessions((prev) => {
+        const filtered = prev.filter((session) => session.id !== sessionId);
+
+        if (!filtered.length) {
+          const fallback = createEmptySession();
+          nextActiveId = fallback.id;
+          return [fallback];
+        }
+
+        if (!filtered.some((session) => session.id === activeSessionId)) {
+          nextActiveId = filtered[0].id;
+        }
+
+        return filtered;
+      });
+
+      if (nextActiveId) {
+        setActiveSessionId(nextActiveId);
+      }
+      toast.success('会话已删除', '历史记录已更新');
+    },
+    [activeSessionId, sessions, toast]
+  );
+
+  const openSessionActionMenu = useCallback(
+    (sessionId: string) => {
+      showActionSheet({
+        title: '会话操作',
+        message: '请选择操作',
+        cancelButtonTitle: '取消',
+        style: {
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+        },
+        options: [
+          {
+            title: '删除会话',
+            destructive: true,
+            onPress: () => deleteSession(sessionId),
+          },
+        ],
+      });
+    },
+    [deleteSession, showActionSheet]
+  );
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: '智能问答',
+      headerRight: () => (
+        <View style={styles.headerActions}>
+          <Pressable onPress={createNewConversation} hitSlop={10} style={styles.headerButton}>
+            <MaterialIcons name='add-comment' size={22} color={textColor} />
+          </Pressable>
+          <Pressable onPress={openHistorySheet} hitSlop={10} style={styles.headerButton}>
+            <MaterialIcons name='history' size={22} color={textColor} />
+          </Pressable>
+        </View>
+      ),
+    });
+  }, [createNewConversation, navigation, openHistorySheet, textColor]);
 
   const onSend = useCallback(
     async (newMessages: IMessage[] = []) => {
       if (!activeSession?.id || !newMessages.length) return;
-
-      setShowHistory(false);
+      setHistorySheetVisible(false);
 
       const userMessage = newMessages[0];
       const question = (userMessage.text || '').trim();
@@ -218,7 +292,7 @@ export default function QaChatScreen() {
       setIsTyping(true);
       try {
         const data = await querySmartChat(question);
-        const answerParts = [data.answer, data.sources.length ? `\n\n参考依据：\n- ${data.sources.join('\n- ')}` : '']
+        const answerParts = [data.answer]//, data.sources.length ? `\n\n参考依据：\n- ${data.sources.join('\n- ')}` : '']
           .filter(Boolean)
           .join('');
 
@@ -262,64 +336,6 @@ export default function QaChatScreen() {
   return (
     <View style={[styles.container, { backgroundColor }]}>
       <View style={[styles.webFrame, Platform.OS === 'web' ? styles.webFrameWeb : null]}>
-        <View style={[styles.toolbar, { borderBottomColor: borderColor, backgroundColor }]}>
-          <Text style={[styles.title, { color: textColor }]} numberOfLines={1}>
-            {activeSession.title}
-          </Text>
-          <View style={styles.actions}>
-            <Pressable
-              style={[styles.actionButton, styles.secondaryButton, { backgroundColor: cardColor, borderColor }]}
-              onPress={toggleHistory}>
-              <Text style={[styles.secondaryButtonText, { color: textColor }]}>历史会话列表</Text>
-            </Pressable>
-            <Pressable style={[styles.actionButton, { backgroundColor: primaryColor }]} onPress={createNewConversation}>
-              <Text style={styles.actionButtonText}>新对话</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {showHistory ? (
-          <View style={[styles.historyPanel, { backgroundColor: cardColor, borderBottomColor: borderColor }]}>
-            <ScrollView style={styles.historyScroll} contentContainerStyle={styles.historyScrollContent}>
-              {sessions.map((session) => {
-                const isActive = session.id === activeSessionId;
-                return (
-                  <Pressable
-                    key={session.id}
-                    style={[
-                      styles.historyItem,
-                      {
-                        borderColor,
-                        backgroundColor: isActive ? primaryColor : backgroundColor,
-                      },
-                    ]}
-                    onPress={() => selectSession(session.id)}>
-                    <Text
-                      style={[
-                        styles.historyTitle,
-                        {
-                          color: isActive ? '#FFFFFF' : textColor,
-                        },
-                      ]}
-                      numberOfLines={1}>
-                      {session.title}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.historyMeta,
-                        {
-                          color: isActive ? '#E5E7EB' : mutedColor,
-                        },
-                      ]}>
-                      {new Date(session.updatedAt).toLocaleString()}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-        ) : null}
-
         <View style={styles.chatWrapper}>
           <GiftedChat
             messages={activeSession.messages}
@@ -349,6 +365,16 @@ export default function QaChatScreen() {
                 }}
               />
             )}
+            renderChatEmpty={() => (
+              <View style={styles.emptyStateWrap}>
+                <Text style={[styles.emptyStateText, { color: mutedColor }]}>在下方提问</Text>
+              </View>
+            )}
+            renderSend={(props) => (
+              <Send {...props}>
+                <Text style={[styles.sendText, { color: primaryColor }]}>发送</Text>
+              </Send>
+            )}
             listProps={{
               style: styles.chatList,
               maintainVisibleContentPosition: {
@@ -356,7 +382,59 @@ export default function QaChatScreen() {
               },
             }}
           />
+
+          {Platform.OS === 'android' ? <AvoidKeyboard offset={0} /> : null}
         </View>
+
+        <BottomSheet
+          isVisible={historySheetVisible}
+          onClose={closeHistorySheet}
+          title='历史会话列表'
+          snapPoints={[0.75]}
+          disablePanGesture
+        >
+          <View style={styles.historyList}>
+            {sessions.map((session) => {
+              const isActive = session.id === activeSessionId;
+
+              return (
+                <Card
+                  key={session.id}
+                  style={{
+                    ...styles.sessionCard,
+                    borderColor,
+                    borderWidth: StyleSheet.hairlineWidth,
+                    backgroundColor: isActive ? primaryColor : cardColor,
+                  }}
+                >
+                  <View style={styles.sessionRow}>
+                    <Pressable style={styles.sessionMain} onPress={() => selectSession(session.id)}>
+                      <Text
+                        style={[styles.historyTitle, { color: isActive ? '#FFFFFF' : textColor }]}
+                        numberOfLines={1}
+                      >
+                        {session.title}
+                      </Text>
+                      <Text style={[styles.historyMeta, { color: isActive ? '#E5E7EB' : mutedColor }]}>
+                        {new Date(session.updatedAt).toLocaleString()}
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={styles.sessionMenuButton}
+                      onPress={() => openSessionActionMenu(session.id)}
+                      hitSlop={10}
+                    >
+                      <MaterialIcons name='more-vert' size={20} color={isActive ? '#FFFFFF' : textColor} />
+                    </Pressable>
+                  </View>
+                </Card>
+              );
+            })}
+          </View>
+        </BottomSheet>
+
+        {SessionActionSheet}
 
         {Platform.OS === 'android' ? <View style={styles.androidSpacer} /> : null}
       </View>
@@ -377,59 +455,6 @@ const styles = StyleSheet.create({
     maxWidth: 980,
     alignSelf: 'center',
   },
-  toolbar: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  title: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  secondaryButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  historyPanel: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    maxHeight: 220,
-  },
-  historyScroll: {
-    width: '100%',
-  },
-  historyScrollContent: {
-    padding: 8,
-    gap: 8,
-  },
-  historyItem: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    gap: 2,
-  },
   historyTitle: {
     fontSize: 13,
     fontWeight: '600',
@@ -440,12 +465,60 @@ const styles = StyleSheet.create({
   chatWrapper: {
     flex: 1,
     minHeight: 0,
-    overflow: 'hidden',
   },
   chatList: {
     minWidth: 0,
   },
+  emptyStateWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    transform: [{ scale: -1 }],
+  },
+  emptyStateText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  sendText: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginHorizontal: 10,
+    marginBottom: 6,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 6,
+    gap: 10,
+  },
+  headerButton: {
+    padding: 2,
+  },
+  historyList: {
+    gap: 10,
+  },
+  sessionCard: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+  },
+  sessionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sessionMain: {
+    flex: 1,
+    gap: 2,
+  },
+  sessionMenuButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   androidSpacer: {
-    height: 4,
+    height: 0,
   },
 });
