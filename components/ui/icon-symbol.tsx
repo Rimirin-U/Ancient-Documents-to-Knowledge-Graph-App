@@ -23,6 +23,7 @@ const MAPPING = {
   'chevron.right': 'chevron-right',
   'person.fill': 'person',
   'clock.fill': 'schedule',
+  'message.fill': 'chat',
 } as IconMapping;
 
 /**
