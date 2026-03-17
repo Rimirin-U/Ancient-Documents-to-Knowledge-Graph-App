@@ -12,6 +12,7 @@ type GraphContent = {
   categories: { name: string }[];
 };
 
+// 兼容旧数据的英文分类名翻译
 const CATEGORY_NAME_ZH: Record<string, string> = {
   Seller: '卖方',
   Buyer: '买方',
@@ -65,7 +66,7 @@ function toGraphContent(content: unknown): GraphContent | null {
     };
   });
 
-  // 翻译分类名
+  // 翻译旧数据的英文分类名；新数据已是中文，直接透传
   const categories =
     categoriesSource.length > 0
       ? categoriesSource.map((c: { name: string }) => ({
@@ -75,11 +76,11 @@ function toGraphContent(content: unknown): GraphContent | null {
           new Set(nodes.map((node) => String((node as any).category ?? '实体')))
         ).map((name) => ({ name }));
 
-  // 规范化节点：确保 name 存在，设置默认 symbolSize
+  // 规范化节点：保留所有后端设置的 label/symbol/itemStyle 等属性，仅补全缺省值
   const fixedNodes = nodes.map((node: any) => ({
     ...node,
     name: node.name !== undefined ? String(node.name) : String(node.id ?? ''),
-    symbolSize: node.symbolSize ?? 32,
+    symbolSize: node.symbolSize ?? 30,
   }));
 
   return {
@@ -97,17 +98,21 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
     return <ThemedText>暂无可渲染关系图，点击下方按钮可重新生成</ThemedText>;
   }
 
+  // 注意：ECharts 图表通过 iframe/WebView 以 JSON 传参，
+  // formatter 必须使用字符串模板，JS 函数会被 JSON.stringify 丢弃。
+  // 边标签通过各连线自身的 label.formatter 字符串控制（后端已设置）。
   const option = {
     tooltip: {
       trigger: 'item',
       confine: true,
+      formatter: '{b}',
     },
     legend: {
       data: graphContent.categories.map((item) => item.name),
       bottom: 4,
-      textStyle: { fontSize: 12 },
-      itemWidth: 14,
-      itemHeight: 14,
+      textStyle: { fontSize: 11 },
+      itemWidth: 12,
+      itemHeight: 12,
     },
     series: [
       {
@@ -117,31 +122,37 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
         links: graphContent.links,
         categories: graphContent.categories,
         roam: true,
+        // 系列默认标签（节点自身 label 会覆盖此处）
         label: {
           show: true,
-          position: 'right',
-          fontSize: 13,
+          position: 'bottom',
+          fontSize: 12,
         },
+        // 边标签默认隐藏；各连线通过自身 label.show/formatter 控制
         edgeLabel: {
-          show: true,
-          formatter: (params: any) =>
-            params.data?.label?.formatter ?? params.data?.value ?? '',
+          show: false,
           fontSize: 11,
+          backgroundColor: 'rgba(255,255,255,0.75)',
+          borderRadius: 3,
+          padding: [2, 5],
         },
         lineStyle: {
           color: 'source',
-          curveness: 0.25,
+          curveness: 0.15,
           width: 2,
         },
+        // 以契约节点为中心的辐射拓扑：增大斥力 + 适度重力
         force: {
-          repulsion: 350,
-          edgeLength: [80, 160],
-          gravity: 0.08,
+          repulsion: 420,
+          edgeLength: [90, 180],
+          gravity: 0.12,
           layoutAnimation: true,
+          friction: 0.6,
         },
         emphasis: {
           focus: 'adjacency',
-          lineStyle: { width: 3 },
+          lineStyle: { width: 3.5 },
+          label: { show: true },
         },
       },
     ],
