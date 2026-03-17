@@ -34,11 +34,44 @@ import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Platform,
+  ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
+
+type AnalysisStatus = 'pending' | 'processing' | 'done' | 'failed';
+
+const STATUS_LABEL: Record<AnalysisStatus, string> = {
+  pending: '等待中',
+  processing: '处理中',
+  done: '已完成',
+  failed: '失败',
+};
+
+const STATUS_COLOR: Record<AnalysisStatus, string> = {
+  pending: '#f59e0b',
+  processing: '#3b82f6',
+  done: '#10b981',
+  failed: '#ef4444',
+};
+
+function StatusBadge({ status }: { status: string | undefined }) {
+  if (!status) return <ThemedText style={styles.statusText}>状态：暂无</ThemedText>;
+  const key = status as AnalysisStatus;
+  const label = STATUS_LABEL[key] ?? status;
+  const color = STATUS_COLOR[key] ?? '#888';
+  const isActive = key === 'pending' || key === 'processing';
+  return (
+    <View style={styles.statusRow}>
+      {isActive && <ActivityIndicator size="small" color={color} style={styles.statusSpinner} />}
+      {!isActive && <View style={[styles.statusDot, { backgroundColor: color }]} />}
+      <ThemedText style={[styles.statusText, { color }]}>{label}</ThemedText>
+    </View>
+  );
+}
 
 const IMAGE_AREA_RATIO = 0.75;
 
@@ -220,6 +253,48 @@ export default function ImageDetailScreen() {
     };
   }, [relationGraphIds, selectedRelationIndex]);
 
+  // 轮询：OCR 处理中时自动刷新
+  useEffect(() => {
+    if (!selectedOcr || selectedOcr.status === 'done' || selectedOcr.status === 'failed') return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const updated = await getOcrDetail(selectedOcr.id);
+        setSelectedOcr(updated);
+      } catch {}
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [selectedOcr]);
+
+  // 轮询：结构化分析处理中时自动刷新
+  useEffect(() => {
+    if (!selectedStructured || selectedStructured.status === 'done' || selectedStructured.status === 'failed') return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const updated = await getStructuredDetail(selectedStructured.id);
+        setSelectedStructured(updated);
+      } catch {}
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [selectedStructured]);
+
+  // 轮询：关系图处理中时自动刷新
+  useEffect(() => {
+    if (!selectedRelation || selectedRelation.status === 'done' || selectedRelation.status === 'failed') return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const updated = await getRelationGraphDetail(selectedRelation.id);
+        setSelectedRelation(updated);
+      } catch {}
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [selectedRelation]);
+
   async function doAction(action: () => Promise<void>, successText: string, onSuccess?: () => Promise<void>) {
     setActionLoading(true);
     try {
@@ -341,12 +416,21 @@ export default function ImageDetailScreen() {
           </View>
         ) : null}
 
-        <AnalysisSectionCard title="识别结果模块" defaultOpen>
-          <ThemedText style={styles.statusText}>状态: {selectedOcr?.status ?? '暂无'}</ThemedText>
-          {selectedOcr?.rawText ? (
-            <ThemedText style={styles.blockText}>{selectedOcr.rawText}</ThemedText>
+        <AnalysisSectionCard title="识别结果" defaultOpen>
+          <StatusBadge status={selectedOcr?.status} />
+          {selectedOcr?.status === 'processing' || selectedOcr?.status === 'pending' ? (
+            <View style={styles.processingWrap}>
+              <ActivityIndicator size="small" color="#3b82f6" />
+              <ThemedText style={styles.processingText}>识别进行中，请稍候...</ThemedText>
+            </View>
+          ) : selectedOcr?.rawText ? (
+            <ScrollView style={styles.ocrScrollView} nestedScrollEnabled>
+              <ThemedText style={styles.ocrText} selectable>
+                {selectedOcr.rawText}
+              </ThemedText>
+            </ScrollView>
           ) : (
-            <ThemedText style={styles.blockText}>暂无识别结果，点击下方按钮进行识别</ThemedText>
+            <ThemedText style={styles.hintText}>暂无识别结果，点击右侧按钮开始识别</ThemedText>
           )}
           <ModuleActionBar
             count={ocrIds.length}
@@ -358,12 +442,17 @@ export default function ImageDetailScreen() {
           />
         </AnalysisSectionCard>
 
-        <AnalysisSectionCard title="分析结果模块" defaultOpen>
-          <ThemedText style={styles.statusText}>状态: {selectedStructured?.status ?? '暂无'}</ThemedText>
-          {translatedStructuredItems.length ? (
+        <AnalysisSectionCard title="分析结果" defaultOpen>
+          <StatusBadge status={selectedStructured?.status} />
+          {selectedStructured?.status === 'processing' || selectedStructured?.status === 'pending' ? (
+            <View style={styles.processingWrap}>
+              <ActivityIndicator size="small" color="#3b82f6" />
+              <ThemedText style={styles.processingText}>分析进行中，请稍候...</ThemedText>
+            </View>
+          ) : translatedStructuredItems.length ? (
             <StructuredContentList items={translatedStructuredItems} onCopyValue={copyStructuredValue} />
           ) : (
-            <ThemedText style={styles.blockText}>暂无分析结果，点击下方按钮进行分析</ThemedText>
+            <ThemedText style={styles.hintText}>暂无分析结果，点击右侧按钮开始分析</ThemedText>
           )}
           <ModuleActionBar
             count={structuredIds.length}
@@ -374,9 +463,16 @@ export default function ImageDetailScreen() {
           />
         </AnalysisSectionCard>
 
-        <AnalysisSectionCard title="关系图谱模块" defaultOpen>
-          <ThemedText style={styles.statusText}>状态: {selectedRelation?.status ?? '暂无'}</ThemedText>
-          <RelationGraphPanel content={selectedRelation?.content} />
+        <AnalysisSectionCard title="关系图谱" defaultOpen>
+          <StatusBadge status={selectedRelation?.status} />
+          {selectedRelation?.status === 'processing' || selectedRelation?.status === 'pending' ? (
+            <View style={styles.processingWrap}>
+              <ActivityIndicator size="small" color="#3b82f6" />
+              <ThemedText style={styles.processingText}>图谱生成中，请稍候...</ThemedText>
+            </View>
+          ) : (
+            <RelationGraphPanel content={selectedRelation?.content} />
+          )}
           <ModuleActionBar
             count={relationGraphIds.length}
             selectedIndex={selectedRelationIndex}
@@ -411,12 +507,52 @@ const styles = StyleSheet.create({
   errorText: {
     textAlign: 'center',
   },
-  statusText: {
-    fontSize: 13,
-    opacity: 0.75,
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  blockText: {
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusSpinner: {
+    width: 14,
+    height: 14,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  processingWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  processingText: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  hintText: {
     fontSize: 14,
     lineHeight: 20,
+    opacity: 0.6,
+    paddingVertical: 4,
+  },
+  ocrScrollView: {
+    maxHeight: 180,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    padding: 2,
+  },
+  ocrText: {
+    fontSize: 14,
+    lineHeight: 22,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    letterSpacing: 0.3,
   },
 });

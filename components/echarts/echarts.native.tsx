@@ -10,8 +10,6 @@ export function Chart({ option, onGesture, theme }:
   { option: any, onGesture: (isBusy: boolean) => void, theme: 'light'|'dark' }) {
   const webViewRef = useRef<WebView>(null);
 
-  console.log("native");
-
   // on option change
   useEffect(() => {
     // 规范化选项格式
