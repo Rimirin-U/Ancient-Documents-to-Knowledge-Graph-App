@@ -29,14 +29,11 @@ function toGraphContent(content: unknown): GraphContent | null {
   let links: any[] = [];
   let categoriesSource: any[] = [];
 
-  // 兼容直接结构 {nodes, links, categories}
   if (Array.isArray(candidate.nodes)) {
     nodes = candidate.nodes;
     links = Array.isArray(candidate.links) ? candidate.links : [];
     categoriesSource = Array.isArray(candidate.categories) ? candidate.categories : [];
-  }
-  // ECharts series 格式 {series: [{type: 'graph', data, links, categories}]}
-  else if (Array.isArray(candidate.series) && candidate.series.length > 0) {
+  } else if (Array.isArray(candidate.series) && candidate.series.length > 0) {
     const graphSeries = (candidate.series as any[]).find((s) => s.type === 'graph');
     if (graphSeries) {
       nodes = Array.isArray(graphSeries.data) ? graphSeries.data : [];
@@ -47,15 +44,13 @@ function toGraphContent(content: unknown): GraphContent | null {
 
   if (!nodes.length) return null;
 
-  // 构建 id→name 映射，修复后端使用 id 字段作为连线 source/target 的问题
+  // 旧数据兼容：links 的 source/target 可能是 "{id}_{name}" 格式，映射为 name
   const idToName: Record<string, string> = {};
   for (const node of nodes) {
     const nodeId = node.id !== undefined ? String(node.id) : null;
     const nodeName = node.name !== undefined ? String(node.name) : null;
     if (nodeId && nodeName) idToName[nodeId] = nodeName;
   }
-
-  // 将连线的 source/target 从 id 映射到 name（ECharts 按 name 匹配节点）
   const fixedLinks = links.map((link: any) => {
     const src = String(link.source ?? '');
     const tgt = String(link.target ?? '');
@@ -66,7 +61,19 @@ function toGraphContent(content: unknown): GraphContent | null {
     };
   });
 
-  // 翻译旧数据的英文分类名；新数据已是中文，直接透传
+  // 关键：去掉节点的 id 字段。
+  // ECharts 节点有 id 时会优先用 id 匹配连线端点，
+  // 映射后的 source/target 是 name 而非 id，会导致连线断开。
+  // 去掉 id 后 ECharts 只能按 name 匹配，连线正常。
+  const fixedNodes = nodes.map((node: any) => {
+    const { id: _removed, ...rest } = node;
+    return {
+      ...rest,
+      name: node.name !== undefined ? String(node.name) : String(node.id ?? ''),
+      symbolSize: node.symbolSize ?? 30,
+    };
+  });
+
   const categories =
     categoriesSource.length > 0
       ? categoriesSource.map((c: { name: string }) => ({
@@ -76,18 +83,7 @@ function toGraphContent(content: unknown): GraphContent | null {
           new Set(nodes.map((node) => String((node as any).category ?? '实体')))
         ).map((name) => ({ name }));
 
-  // 规范化节点：保留所有后端设置的 label/symbol/itemStyle 等属性，仅补全缺省值
-  const fixedNodes = nodes.map((node: any) => ({
-    ...node,
-    name: node.name !== undefined ? String(node.name) : String(node.id ?? ''),
-    symbolSize: node.symbolSize ?? 30,
-  }));
-
-  return {
-    nodes: fixedNodes,
-    links: fixedLinks,
-    categories,
-  };
+  return { nodes: fixedNodes, links: fixedLinks, categories };
 }
 
 export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
@@ -98,21 +94,26 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
     return <ThemedText>暂无可渲染关系图，点击下方按钮可重新生成</ThemedText>;
   }
 
-  // 注意：ECharts 图表通过 iframe/WebView 以 JSON 传参，
-  // formatter 必须使用字符串模板，JS 函数会被 JSON.stringify 丢弃。
-  // 边标签通过各连线自身的 label.formatter 字符串控制（后端已设置）。
+  // ECharts 通过 iframe/WebView JSON 传参，formatter 只能用字符串模板，不能用 JS 函数。
+  // 各节点/连线的 label、lineStyle、itemStyle 已由后端按角色单独配置。
+  const isDark = scheme === 'dark';
   const option = {
+    backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
       confine: true,
-      formatter: '{b}',
+      backgroundColor: isDark ? '#1e293b' : '#fff',
+      borderColor: isDark ? '#334155' : '#e2e8f0',
+      textStyle: { color: isDark ? '#f1f5f9' : '#1e293b', fontSize: 12 },
+      formatter: '{b}<br/>{c}',
     },
     legend: {
       data: graphContent.categories.map((item) => item.name),
       bottom: 4,
-      textStyle: { fontSize: 11 },
+      textStyle: { fontSize: 11, color: isDark ? '#94a3b8' : '#64748b' },
       itemWidth: 12,
       itemHeight: 12,
+      icon: 'circle',
     },
     series: [
       {
@@ -122,37 +123,47 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
         links: graphContent.links,
         categories: graphContent.categories,
         roam: true,
-        // 系列默认标签（节点自身 label 会覆盖此处）
+        // 系列级默认标签（节点自身 label 属性会覆盖此处）
         label: {
           show: true,
           position: 'bottom',
           fontSize: 12,
+          color: isDark ? '#e2e8f0' : '#1e293b',
         },
-        // 边标签默认隐藏；各连线通过自身 label.show/formatter 控制
+        // 边标签：默认隐藏，各连线通过自身 label.show/formatter 单独控制
         edgeLabel: {
           show: false,
           fontSize: 11,
-          backgroundColor: 'rgba(255,255,255,0.75)',
-          borderRadius: 3,
-          padding: [2, 5],
+          fontWeight: 'bold',
+          backgroundColor: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.9)',
+          borderRadius: 4,
+          padding: [3, 6],
+          color: isDark ? '#f1f5f9' : '#1e293b',
         },
         lineStyle: {
-          color: 'source',
-          curveness: 0.15,
+          curveness: 0.1,
           width: 2,
         },
-        // 以契约节点为中心的辐射拓扑：增大斥力 + 适度重力
+        // 辐射拓扑参数：大斥力撑开节点，适度重力让契约节点居中
         force: {
-          repulsion: 420,
-          edgeLength: [90, 180],
-          gravity: 0.12,
+          repulsion: 500,
+          edgeLength: [100, 200],
+          gravity: 0.15,
           layoutAnimation: true,
-          friction: 0.6,
+          friction: 0.65,
         },
+        // 点击/悬停高亮邻接关系
         emphasis: {
           focus: 'adjacency',
-          lineStyle: { width: 3.5 },
-          label: { show: true },
+          lineStyle: { width: 4 },
+          label: { show: true, fontWeight: 'bold' },
+          itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' },
+        },
+        // 非焦点节点变暗，突出当前选中
+        blur: {
+          itemStyle: { opacity: 0.25 },
+          lineStyle: { opacity: 0.15 },
+          label: { opacity: 0.3 },
         },
       },
     ],
