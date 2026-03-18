@@ -124,7 +124,7 @@ export const MediaPicker = forwardRef<RNView, MediaPickerProps>(
 
     const requestPermissions = async () => {
       try {
-        const { status } = await MediaLibrary.requestPermissionsAsync();
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         setHasPermission(status === 'granted');
 
         if (status !== 'granted') {

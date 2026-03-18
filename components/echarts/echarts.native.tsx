@@ -10,16 +10,14 @@ export function Chart({ option, onGesture, theme }:
   { option: any, onGesture: (isBusy: boolean) => void, theme: 'light'|'dark' }) {
   const webViewRef = useRef<WebView>(null);
 
-  console.log("native");
-
   // on option change
   useEffect(() => {
-    // 规范化选项格式
+    // legend 若为数组取第一项（ECharts 接受对象形式）
     const normalizedOption = { ...option };
     if (Array.isArray(normalizedOption.legend)) {
       normalizedOption.legend = normalizedOption.legend[0] || {};
     }
-    
+
     const script = `setChartOption(${JSON.stringify(normalizedOption)}, '${theme}')`;
     webViewRef.current?.injectJavaScript(script);
   }, [option, theme]);

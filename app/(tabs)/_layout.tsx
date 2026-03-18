@@ -29,11 +29,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="qa-chat"
+        name="chat"
         options={{
           title: '问答',
           headerShown: true,
-          tabBarIcon: ({ color }) => <MaterialIcons size={24} name="help-outline" color={color} />
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={color} />
         }}
       />
       <Tabs.Screen

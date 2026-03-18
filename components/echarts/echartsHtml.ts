@@ -1,8 +1,10 @@
 export function getChartHtml(option: any, theme: 'light'|'dark') {
-  // 确保legend是对象，不是数组
+  // legend 若为数组取第一项（ECharts 接受对象形式）
   const normalizedOption = { ...option };
   if (Array.isArray(normalizedOption.legend)) {
-    normalizedOption.legend = normalizedOption.legend[0] || {};
+    // 保留完整的 data 列表，只取第一个 legend 配置对象
+    const first = normalizedOption.legend[0] || {};
+    normalizedOption.legend = first;
   }
 
   // 使用window.__ECHARTS_OPTION__来传递数据，避免字符串拼接中文问题
