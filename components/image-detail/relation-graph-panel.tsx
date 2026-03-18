@@ -60,11 +60,6 @@ function toGraphContent(content: unknown): GraphContent | null {
       target: idToName[tgt] ?? tgt,
     };
   });
-
-  // 关键：去掉节点的 id 字段。
-  // ECharts 节点有 id 时会优先用 id 匹配连线端点，
-  // 映射后的 source/target 是 name 而非 id，会导致连线断开。
-  // 去掉 id 后 ECharts 只能按 name 匹配，连线正常。
   const fixedNodes = nodes.map((node: any) => {
     const { id: _removed, ...rest } = node;
     return {

@@ -2,7 +2,6 @@
 // API 基础配置和公共函数
 
 import { getToken } from './auth';
-import { API_BASE_URL } from './config';
 
 export async function authHeaders(): Promise<Record<string, string>> {
   const token = await getToken();
