@@ -17,16 +17,32 @@ export async function querySmartChat(question: string): Promise<ChatQueryRespons
     body: JSON.stringify({ question }),
   });
 
-  const data = await response.json();
+  const rawText = await response.text();
+  let data: any = null;
+
+  if (rawText) {
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      data = null;
+    }
+  }
+
+  const payload = data?.data && typeof data.data === 'object' ? data.data : data;
 
   if (!response.ok || !data?.success) {
-    throw new Error(data?.detail || '问答请求失败');
+    throw new Error(
+      (typeof data?.detail === 'string' && data.detail) ||
+        (typeof data?.message === 'string' && data.message) ||
+        (rawText.trim() ? rawText.trim() : undefined) ||
+        '问答请求失败'
+    );
   }
 
   return {
-    answer: typeof data.answer === 'string' ? data.answer : '',
-    sources: Array.isArray(data.sources)
-      ? data.sources.filter((item: unknown): item is string => typeof item === 'string')
+    answer: typeof payload?.answer === 'string' ? payload.answer : '',
+    sources: Array.isArray(payload?.sources)
+      ? payload.sources.filter((item: unknown): item is string => typeof item === 'string')
       : [],
   };
 }
