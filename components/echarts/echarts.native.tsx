@@ -4,7 +4,7 @@ import { WebView } from "react-native-webview";
 import { getChartHtml } from "./echartsHtml";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const E_HEIGHT = 400;
+const E_HEIGHT = 480;
 
 export type NodeClickData = {
   name: string;
