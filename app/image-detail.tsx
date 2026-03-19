@@ -354,7 +354,13 @@ export default function ImageDetailScreen() {
     }
 
     doAction(() => triggerStructuredAnalysis(selectedOcr.id), '结构化任务已提交', async () => {
-      const nextStructuredIds = await getStructuredIdsByOcr(selectedOcr.id);
+      // Celery Worker 创建 PROCESSING 记录需要短暂时间，最多重试 5 次（每次等 400ms）
+      let nextStructuredIds: number[] = [];
+      for (let attempt = 0; attempt < 5; attempt++) {
+        nextStructuredIds = await getStructuredIdsByOcr(selectedOcr.id);
+        if (nextStructuredIds.length > (structuredIds.length)) break;
+        await new Promise((r) => setTimeout(r, 400));
+      }
       setStructuredIds(nextStructuredIds);
       setSelectedStructuredIndex(nextStructuredIds.length ? nextStructuredIds.length - 1 : 0);
     });
@@ -367,7 +373,13 @@ export default function ImageDetailScreen() {
     }
 
     doAction(() => triggerRelationGraphAnalysis(selectedStructured.id), '关系图任务已提交', async () => {
-      const nextRelationIds = await getRelationGraphIdsByStructured(selectedStructured.id);
+      // 同上，等待 Celery Worker 写入 PROCESSING 记录
+      let nextRelationIds: number[] = [];
+      for (let attempt = 0; attempt < 5; attempt++) {
+        nextRelationIds = await getRelationGraphIdsByStructured(selectedStructured.id);
+        if (nextRelationIds.length > (relationGraphIds.length)) break;
+        await new Promise((r) => setTimeout(r, 400));
+      }
       setRelationGraphIds(nextRelationIds);
       setSelectedRelationIndex(nextRelationIds.length ? nextRelationIds.length - 1 : 0);
     });

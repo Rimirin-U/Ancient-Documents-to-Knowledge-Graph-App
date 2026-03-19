@@ -128,10 +128,14 @@ export async function getCrossDocRecordList(params?: {
         await Promise.all(imageIds.map((imageId) => getImageThumbnailDataUrl(imageId)))
       ).filter((url) => Boolean(url));
 
+      const createdDate = new Date(detail.created_at);
+      const month = createdDate.getMonth() + 1;
+      const day = createdDate.getDate();
+      const hhmm = createdDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
       return {
         id,
-        title: `跨文档任务 ${id}`,
-        filename: `${detail.structured_result_ids.length} 个文档`,
+        title: `跨文档分析 · ${month}月${day}日 ${hhmm}`,
+        filename: `共 ${detail.structured_result_ids.length} 份文书`,
         uploadTime: detail.created_at,
         previewThumbnailDataUrls,
       } satisfies CrossDocRecordItem;
