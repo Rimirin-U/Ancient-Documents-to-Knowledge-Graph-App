@@ -24,17 +24,20 @@ function formatStructuredValue(value: unknown): string {
   }
 }
 
+// 预设字段展示顺序（Translation 固定在最后）
+const FIELD_ORDER = Object.keys(STRUCTURED_FIELD_LABELS);
+
 export function toStructuredDisplayItems(
   content?: Record<string, unknown>
 ): StructuredDisplayItem[] {
   if (!content) return [];
 
-  return Object.entries(content)
-    .filter(([key]) => Boolean(STRUCTURED_FIELD_LABELS[key]))
-    .map(([key, value]) => ({
+  return FIELD_ORDER
+    .filter((key) => key in content)
+    .map((key) => ({
       key,
       label: STRUCTURED_FIELD_LABELS[key],
-      value: formatStructuredValue(value),
+      value: formatStructuredValue(content[key]),
     }))
     .filter((item) => Boolean(item.value));
 }

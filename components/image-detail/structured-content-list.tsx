@@ -26,18 +26,27 @@ export function StructuredContentList({ items, onCopyValue }: StructuredContentL
     <View style={[styles.list, { borderColor }]}>
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
+        const isTranslation = item.key === 'Translation';
 
         return (
           <View
             key={item.key}
-            style={[styles.row, { borderColor, borderBottomWidth: isLast ? 0 : 1 }]}
+            style={[
+              isTranslation ? styles.rowBlock : styles.row,
+              { borderColor, borderBottomWidth: isLast ? 0 : 1 },
+            ]}
           >
             <ThemedText style={[styles.keyText, { color: keyColor }]}>{item.label}</ThemedText>
             <Pressable
-              style={({ pressed }) => [styles.valuePressable, pressed && { backgroundColor: pressedBg }]}
+              style={({ pressed }) => [
+                isTranslation ? styles.valuePressableBlock : styles.valuePressable,
+                pressed && { backgroundColor: pressedBg },
+              ]}
               onPress={() => onCopyValue?.(item.value)}
             >
-              <ThemedText style={styles.valueText}>{item.value || '-'}</ThemedText>
+              <ThemedText style={isTranslation ? styles.valueTextBlock : styles.valueText}>
+                {item.value || '-'}
+              </ThemedText>
             </Pressable>
           </View>
         );
@@ -59,6 +68,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 1,
   },
+  // 译文行：竖向排列，标签在上，正文在下
+  rowBlock: {
+    flexDirection: 'column',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
   keyText: {
     width: 86,
     fontSize: 14,
@@ -70,8 +87,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 2,
   },
+  valuePressableBlock: {
+    borderRadius: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
   valueText: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  valueTextBlock: {
+    fontSize: 14,
+    lineHeight: 22,
   },
 });
