@@ -3,7 +3,7 @@ import { useToast } from '@/components/ui/toast';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColor } from '@/hooks/useColor';
-import { sendChatQuery, ChatSource } from '@/services/chat';
+import { sendChatQuery, getKbStatus, triggerReindex, ChatSource, ChatHistoryTurn } from '@/services/chat';
 import { getStorageItem, setStorageItem, removeStorageItem } from '@/services/storage';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useRef, useState } from 'react';
@@ -35,9 +35,16 @@ type Message = {
   createdAt: number;
 };
 
+const VALID = (v?: string) => v && v !== '未识别' && v !== '未记载';
+
 function SourceCard({ source, cardBg, textColor }: { source: ChatSource; cardBg: string; textColor: string }) {
-  const hasTime = source.time && source.time !== '未识别';
-  const hasLocation = source.location && source.location !== '未识别';
+  const metaItems: { icon: string; label: string; value: string }[] = [];
+  if (VALID(source.time))     metaItems.push({ icon: '📅', label: '时间', value: source.time });
+  if (VALID(source.location)) metaItems.push({ icon: '📍', label: '地点', value: source.location });
+  if (VALID(source.seller))   metaItems.push({ icon: '👤', label: '卖方', value: source.seller });
+  if (VALID(source.buyer))    metaItems.push({ icon: '👤', label: '买方', value: source.buyer });
+  if (VALID(source.price))    metaItems.push({ icon: '💰', label: '价格', value: source.price });
+
   return (
     <View style={[styles.sourceCard, { backgroundColor: cardBg }]}>
       <View style={styles.sourceHeader}>
@@ -45,17 +52,16 @@ function SourceCard({ source, cardBg, textColor }: { source: ChatSource; cardBg:
           <ThemedText style={styles.sourceIndexText}>[{source.index}]</ThemedText>
         </View>
         <ThemedText style={[styles.sourceFilename, { color: textColor }]} numberOfLines={1}>
-          {source.filename || '未知文件'}
+          {source.filename || '未知文书'}
         </ThemedText>
       </View>
-      {(hasTime || hasLocation) && (
+      {metaItems.length > 0 && (
         <View style={styles.sourceMeta}>
-          {hasTime && (
-            <ThemedText style={styles.sourceMetaText}>📅 {source.time}</ThemedText>
-          )}
-          {hasLocation && (
-            <ThemedText style={styles.sourceMetaText}>📍 {source.location}</ThemedText>
-          )}
+          {metaItems.map((m) => (
+            <ThemedText key={m.label} style={styles.sourceMetaText}>
+              {m.icon} {m.value}
+            </ThemedText>
+          ))}
         </View>
       )}
       {source.excerpt && (
@@ -86,15 +92,16 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [kbCount, setKbCount] = useState<number | null>(null);
+  const [reindexing, setReindexing] = useState(false);
 
   useEffect(() => {
     getStorageItem(STORAGE_KEY).then((raw) => {
       if (raw) {
-        try {
-          setMessages(JSON.parse(raw));
-        } catch (_) {}
+        try { setMessages(JSON.parse(raw)); } catch (_) {}
       }
     });
+    getKbStatus().then(setKbCount);
   }, []);
 
   useEffect(() => {
@@ -115,6 +122,20 @@ export default function ChatScreen() {
     removeStorageItem(STORAGE_KEY);
   }
 
+  async function handleReindex() {
+    setReindexing(true);
+    try {
+      const msg = await triggerReindex();
+      toast.show('info', '重建中', msg);
+      // 2 秒后刷新知识库文档数
+      setTimeout(() => getKbStatus().then(setKbCount), 2000);
+    } catch (err) {
+      toast.error('失败', err instanceof Error ? err.message : '重建失败');
+    } finally {
+      setReindexing(false);
+    }
+  }
+
   async function handleSend() {
     const text = inputText.trim();
     if (!text) return;
@@ -131,7 +152,12 @@ export default function ChatScreen() {
     setLoading(true);
 
     try {
-      const data = await sendChatQuery(text);
+      // 传入近期对话历史，支持多轮连续问答
+      const history: ChatHistoryTurn[] = messages.slice(-8).map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+      const data = await sendChatQuery(text, history);
       const botMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -150,14 +176,35 @@ export default function ChatScreen() {
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: pageBg }]}>
-      {messages.length > 0 && (
-        <View style={[styles.topBar, { borderBottomColor: borderColor }]}>
-          <Pressable onPress={handleClear} style={styles.clearBtn}>
-            <MaterialIcons name="delete-outline" size={18} color={borderColor} />
-            <ThemedText style={[styles.clearText, { color: borderColor }]}>清空记录</ThemedText>
+      <View style={[styles.topBar, { borderBottomColor: borderColor }]}>
+        {/* 知识库状态 */}
+        <Pressable
+          onPress={() => getKbStatus().then(setKbCount)}
+          style={styles.kbStatus}
+        >
+          <MaterialIcons name="library-books" size={14} color={borderColor} />
+          <ThemedText style={[styles.kbStatusText, { color: borderColor }]}>
+            {kbCount === null ? '加载中…' : `知识库 ${kbCount} 份文书`}
+          </ThemedText>
+        </Pressable>
+
+        <View style={styles.topBarActions}>
+          {/* 重建索引按钮 */}
+          <Pressable onPress={handleReindex} disabled={reindexing} style={styles.iconBtn}>
+            {reindexing
+              ? <ActivityIndicator size={14} color={borderColor} />
+              : <MaterialIcons name="sync" size={16} color={borderColor} />
+            }
           </Pressable>
+          {/* 清空记录按钮 */}
+          {messages.length > 0 && (
+            <Pressable onPress={handleClear} style={styles.clearBtn}>
+              <MaterialIcons name="delete-outline" size={16} color={borderColor} />
+              <ThemedText style={[styles.clearText, { color: borderColor }]}>清空</ThemedText>
+            </Pressable>
+          )}
         </View>
-      )}
+      </View>
       <FlatList
         ref={listRef}
         data={messages}
@@ -215,7 +262,9 @@ export default function ChatScreen() {
               文档智能问答
             </ThemedText>
             <ThemedText style={[styles.emptySubtitle, { color: borderColor }]}>
-              基于您已上传的地契文书，可以这样提问：
+              {kbCount !== null && kbCount > 0
+                ? `当前知识库包含 ${kbCount} 份文书，可以这样提问：`
+                : '上传并完成 OCR 识别后，可以这样提问：'}
             </ThemedText>
             <View style={styles.suggestionsWrap}>
               {EXAMPLE_QUESTIONS.map((q) => (
@@ -393,16 +442,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   topBar: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  kbStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  kbStatusText: {
+    fontSize: 12,
+  },
+  topBarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconBtn: {
+    padding: 4,
   },
   clearBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
     padding: 4,
   },
-  clearText: { fontSize: 13 },
+  clearText: { fontSize: 12 },
 });
