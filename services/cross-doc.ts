@@ -60,12 +60,41 @@ export type MultiTaskDetail = {
   createdAt: string;
 };
 
+export type CrossDocStatistics = {
+  doc_count?: number;
+  time_range?: {
+    start?: number;
+    end?: number;
+    span?: number;
+    docs_with_time?: number;
+  };
+  unique_people?: number;
+  cross_role_people?: string[];
+  top_people?: Array<{
+    name: string;
+    doc_count: number;
+    roles: string[];
+  }>;
+  top_locations?: Array<{
+    name: string;
+    count: number;
+  }>;
+  land_chains?: Array<{
+    location: string;
+    transaction_count: number;
+    years?: number[];
+  }>;
+  land_chain_count?: number;
+};
+
 export type MultiRelationGraphAnalysis = {
   id: number;
   multiTaskId: number;
   content: unknown;
   status: 'pending' | 'processing' | 'done' | 'failed';
   createdAt: string;
+  statistics?: CrossDocStatistics;
+  insights?: string;
 };
 
 export type CrossDocImageInfo = {
@@ -131,12 +160,16 @@ export async function getMultiRelationGraphDetail(graphId: number): Promise<Mult
     throw new Error(result.detail || `获取跨文档关系图 ${graphId} 失败`);
   }
 
+  const rawContent = result.data.content as Record<string, unknown> | null | undefined;
+
   return {
     id: result.data.id,
     multiTaskId: result.data.multi_task_id,
     content: result.data.content,
     status: result.data.status,
     createdAt: result.data.created_at,
+    statistics: rawContent?.statistics as CrossDocStatistics | undefined,
+    insights: typeof rawContent?.insights === 'string' ? rawContent.insights : undefined,
   };
 }
 

@@ -2,6 +2,7 @@ import {
   CrossDocImageGalleryItem,
   ImageGallerySection,
 } from '@/components/cross-doc-detail/image-gallery-section';
+import { CrossDocInsightsPanel } from '@/components/cross-doc-detail/insights-panel';
 import { ImageInfoSheet } from '@/components/cross-doc-detail/image-info-sheet';
 import { AnalysisSectionCard } from '@/components/image-detail/analysis-section-card';
 import { ModuleActionBar } from '@/components/image-detail/module-action-bar';
@@ -257,6 +258,15 @@ export default function CrossDocDetailScreen() {
               disabled={actionLoading}
             />
           </AnalysisSectionCard>
+
+          {(selectedRelation?.statistics || selectedRelation?.insights) && (
+            <AnalysisSectionCard title="分析洞察" defaultOpen>
+              <CrossDocInsightsPanel
+                statistics={selectedRelation.statistics}
+                insights={selectedRelation.insights}
+              />
+            </AnalysisSectionCard>
+          )}
         </ScrollView>
       ) : null}
 
