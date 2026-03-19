@@ -1,8 +1,13 @@
 import { API_BASE_URL, authHeaders } from './api';
 
+type ChatResponseData = {
+  answer: string;
+  sources: string[];
+};
+
 type ChatResponse = {
   success: boolean;
-  data: string;
+  data: ChatResponseData;
   detail?: string;
 };
 
@@ -24,5 +29,5 @@ export async function sendChatQuery(question: string): Promise<string> {
     throw new Error(result.detail || '发送消息失败');
   }
 
-  return result.data;
+  return result.data.answer;
 }

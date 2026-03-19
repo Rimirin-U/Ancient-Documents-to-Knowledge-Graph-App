@@ -4,6 +4,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColor } from '@/hooks/useColor';
 import { sendChatQuery } from '@/services/chat';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -11,6 +12,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   TextInput,
   View,
@@ -37,16 +39,41 @@ export default function ChatScreen() {
   const borderColor = useColor('icon', { light: '#d7dae0', dark: '#3a414c' });
   const textColor = useColor('text', {});
 
+  const STORAGE_KEY = 'chat_messages';
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // 启动时从本地加载历史消息
   useEffect(() => {
-    // 滚动到底部
+    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
+      if (raw) {
+        try {
+          setMessages(JSON.parse(raw));
+        } catch (_) {}
+      }
+    });
+  }, []);
+
+  // 消息变化时持久化
+  useEffect(() => {
+    if (messages.length > 0) {
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    }
+  }, [messages]);
+
+  // 滚动到底部
+  useEffect(() => {
     setTimeout(() => {
       listRef.current?.scrollToEnd({ animated: true });
     }, 100);
   }, [messages]);
+
+  function handleClear() {
+    setMessages([]);
+    AsyncStorage.removeItem(STORAGE_KEY);
+  }
 
   async function handleSend() {
     const text = inputText.trim();
@@ -82,6 +109,14 @@ export default function ChatScreen() {
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: pageBg }]}>
+      {messages.length > 0 && (
+        <View style={[styles.topBar, { borderBottomColor: borderColor }]}>
+          <Pressable onPress={handleClear} style={styles.clearBtn}>
+            <MaterialIcons name="delete-outline" size={18} color={borderColor} />
+            <ThemedText style={[styles.clearText, { color: borderColor }]}>清空记录</ThemedText>
+          </Pressable>
+        </View>
+      )}
       <FlatList
         ref={listRef}
         data={messages}
@@ -207,5 +242,20 @@ const styles = StyleSheet.create({
     padding: 0,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  topBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    alignItems: 'flex-end',
+  },
+  clearBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    padding: 4,
+  },
+  clearText: {
+    fontSize: 13,
   },
 });
