@@ -253,11 +253,18 @@ export default function ImageDetailScreen() {
     };
   }, [relationGraphIds, selectedRelationIndex]);
 
+  // 最大轮询次数（约 90 秒后停止）
+  const MAX_POLL_COUNT = 20;
+
   // 轮询：OCR 处理中时自动刷新（指数退避：1.5s → 3s → 6s → 最大 10s）
   const ocrRetryCount = useRef(0);
   useEffect(() => {
     if (!selectedOcr || selectedOcr.status === 'done' || selectedOcr.status === 'failed') {
       ocrRetryCount.current = 0;
+      return;
+    }
+    if (ocrRetryCount.current >= MAX_POLL_COUNT) {
+      toast.warning('提示', 'OCR 识别超时，请稍后手动刷新重试');
       return;
     }
     const delay = Math.min(1500 * Math.pow(1.5, ocrRetryCount.current), 10000);
@@ -278,6 +285,10 @@ export default function ImageDetailScreen() {
       structuredRetryCount.current = 0;
       return;
     }
+    if (structuredRetryCount.current >= MAX_POLL_COUNT) {
+      toast.warning('提示', '结构化分析超时，请稍后手动刷新重试');
+      return;
+    }
     const delay = Math.min(1500 * Math.pow(1.5, structuredRetryCount.current), 10000);
     const timer = setTimeout(async () => {
       try {
@@ -294,6 +305,10 @@ export default function ImageDetailScreen() {
   useEffect(() => {
     if (!selectedRelation || selectedRelation.status === 'done' || selectedRelation.status === 'failed') {
       relationRetryCount.current = 0;
+      return;
+    }
+    if (relationRetryCount.current >= MAX_POLL_COUNT) {
+      toast.warning('提示', '知识图谱生成超时，请稍后手动刷新重试');
       return;
     }
     const delay = Math.min(1500 * Math.pow(1.5, relationRetryCount.current), 10000);

@@ -19,6 +19,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+const EXAMPLE_QUESTIONS = [
+  '这批地契中涉及哪些买卖双方？',
+  '哪些地块出现了多次交易？',
+  '交易价格最高的文书是哪份？',
+  '有哪些地契来自同一地区？',
+  '这些文书的时间跨度是多少年？',
+];
+
 type Message = {
   id: string;
   role: 'user' | 'assistant';
@@ -203,9 +211,23 @@ export default function ChatScreen() {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <MaterialIcons name="chat-bubble-outline" size={48} color={borderColor} />
-            <ThemedText style={{ color: borderColor, marginTop: 12 }}>
-              开始与文档助手对话吧
+            <ThemedText style={[styles.emptyTitle, { color: borderColor }]}>
+              文档智能问答
             </ThemedText>
+            <ThemedText style={[styles.emptySubtitle, { color: borderColor }]}>
+              基于您已上传的地契文书，可以这样提问：
+            </ThemedText>
+            <View style={styles.suggestionsWrap}>
+              {EXAMPLE_QUESTIONS.map((q) => (
+                <Pressable
+                  key={q}
+                  style={[styles.suggestionChip, { borderColor, backgroundColor: messageBotBg }]}
+                  onPress={() => setInputText(q)}
+                >
+                  <ThemedText style={[styles.suggestionText, { color: textColor }]}>{q}</ThemedText>
+                </Pressable>
+              ))}
+            </View>
           </View>
         }
       />
@@ -251,7 +273,35 @@ const styles = StyleSheet.create({
   emptyWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 100,
+    marginTop: 60,
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    opacity: 0.7,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  suggestionsWrap: {
+    marginTop: 12,
+    gap: 8,
+    width: '100%',
+  },
+  suggestionChip: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  suggestionText: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   messageRow: {
     flexDirection: 'row',

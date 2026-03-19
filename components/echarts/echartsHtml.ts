@@ -44,8 +44,12 @@ export function getChartHtml(option: any, theme: 'light'|'dark') {
           // 事件
           myChart.on('click', function(params) {
             var message = {
-              type: 'click',
-              data: params.name
+              type: 'nodeClick',
+              name: params.name,
+              category: params.data && params.data.category !== undefined ? params.data.category : null,
+              symbolSize: params.data && params.data.symbolSize !== undefined ? params.data.symbolSize : null,
+              properties: params.data && params.data.properties ? params.data.properties : null,
+              seriesType: params.seriesType || null,
             };
             if (typeof window.ReactNativeWebView !== 'undefined') {
               window.ReactNativeWebView.postMessage(JSON.stringify(message));

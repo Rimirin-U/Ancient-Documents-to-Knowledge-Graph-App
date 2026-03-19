@@ -1,6 +1,9 @@
-import { Chart } from '@/components/echarts/echarts';
+import { Chart, NodeClickData } from '@/components/echarts/echarts';
 import { ThemedText } from '@/components/themed-text';
+import { useColor } from '@/hooks/useColor';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 type RelationGraphPanelProps = {
   content: unknown;
@@ -86,9 +89,68 @@ function toGraphContent(content: unknown): GraphContent | null {
   return { nodes: fixedNodes, links: fixedLinks, categories };
 }
 
+const CATEGORY_LABELS = ['卖方', '买方', '中人', '地块', '跨角色', '其他'];
+
+function NodeDetailModal({
+  node,
+  visible,
+  onClose,
+}: {
+  node: NodeClickData | null;
+  visible: boolean;
+  onClose: () => void;
+}) {
+  const overlayBg = 'rgba(0,0,0,0.5)';
+  const cardBg = useColor('background', { light: '#ffffff', dark: '#1e293b' });
+  const borderColor = useColor('icon', { light: '#e2e8f0', dark: '#334155' });
+  const textColor = useColor('text', {});
+  const subtleColor = useColor('icon', { light: '#64748b', dark: '#94a3b8' });
+
+  if (!node) return null;
+
+  const categoryLabel =
+    typeof node.category === 'number' ? (CATEGORY_LABELS[node.category] ?? `类型 ${node.category}`) : '实体';
+
+  const extraProps = node.properties ? Object.entries(node.properties) : [];
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={[styles.modalOverlay, { backgroundColor: overlayBg }]} onPress={onClose}>
+        <Pressable
+          style={[styles.modalCard, { backgroundColor: cardBg, borderColor }]}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <View style={styles.modalHeader}>
+            <ThemedText style={[styles.modalTitle, { color: textColor }]}>{node.name}</ThemedText>
+            <View style={[styles.categoryBadge, { borderColor }]}>
+              <ThemedText style={[styles.categoryText, { color: subtleColor }]}>{categoryLabel}</ThemedText>
+            </View>
+          </View>
+
+          {extraProps.length > 0 && (
+            <ScrollView style={styles.propsScroll}>
+              {extraProps.map(([key, val]) => (
+                <View key={key} style={[styles.propRow, { borderBottomColor: borderColor }]}>
+                  <ThemedText style={[styles.propKey, { color: subtleColor }]}>{key}</ThemedText>
+                  <ThemedText style={[styles.propVal, { color: textColor }]}>{String(val)}</ThemedText>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+
+          <Pressable style={[styles.closeBtn, { backgroundColor: '#0a7ea4' }]} onPress={onClose}>
+            <ThemedText style={styles.closeBtnText}>关闭</ThemedText>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
   const scheme = useColorScheme() ?? 'light';
   const graphContent = toGraphContent(content);
+  const [selectedNode, setSelectedNode] = useState<NodeClickData | null>(null);
 
   if (!graphContent) {
     return <ThemedText>暂无可渲染关系图，点击下方按钮可重新生成</ThemedText>;
@@ -123,14 +185,12 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
         links: graphContent.links,
         categories: graphContent.categories,
         roam: true,
-        // 系列级默认标签（节点自身 label 属性会覆盖此处）
         label: {
           show: true,
           position: 'bottom',
           fontSize: 12,
           color: isDark ? '#e2e8f0' : '#1e293b',
         },
-        // 边标签：默认隐藏，各连线通过自身 label.show/formatter 单独控制
         edgeLabel: {
           show: false,
           fontSize: 11,
@@ -144,7 +204,6 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
           curveness: 0.1,
           width: 2,
         },
-        // 辐射拓扑参数：大斥力撑开节点，适度重力让契约节点居中
         force: {
           repulsion: 500,
           edgeLength: [100, 200],
@@ -152,14 +211,12 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
           layoutAnimation: true,
           friction: 0.65,
         },
-        // 点击/悬停高亮邻接关系
         emphasis: {
           focus: 'adjacency',
           lineStyle: { width: 4 },
           label: { show: true, fontWeight: 'bold' },
           itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' },
         },
-        // 非焦点节点变暗，突出当前选中
         blur: {
           itemStyle: { opacity: 0.25 },
           lineStyle: { opacity: 0.15 },
@@ -169,5 +226,85 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
     ],
   };
 
-  return <Chart option={option} onGesture={() => {}} theme={scheme} />;
+  return (
+    <>
+      <Chart
+        option={option}
+        onGesture={() => {}}
+        theme={scheme}
+        onNodeClick={(node) => setSelectedNode(node)}
+      />
+      <NodeDetailModal
+        node={selectedNode}
+        visible={!!selectedNode}
+        onClose={() => setSelectedNode(null)}
+      />
+    </>
+  );
 }
+
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+    gap: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    flex: 1,
+  },
+  categoryBadge: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  categoryText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  propsScroll: {
+    maxHeight: 160,
+  },
+  propRow: {
+    flexDirection: 'row',
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 8,
+  },
+  propKey: {
+    fontSize: 12,
+    width: 80,
+    flexShrink: 0,
+  },
+  propVal: {
+    fontSize: 12,
+    flex: 1,
+  },
+  closeBtn: {
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  closeBtnText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+});

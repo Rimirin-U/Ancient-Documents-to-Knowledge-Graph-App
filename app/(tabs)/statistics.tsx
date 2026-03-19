@@ -285,12 +285,30 @@ export default function StatisticsScreen() {
         </View>
       )}
 
-      {data.total_analyzed === 0 && (
+      {data.total_images === 0 && (
         <View style={styles.emptyWrap}>
-          <MaterialIcons name="bar-chart" size={56} color={borderColor} />
-          <ThemedText style={[styles.emptyText, { color: borderColor }]}>
-            暂无分析数据{'\n'}上传并分析文书后此处将自动展示统计图表
+          <MaterialIcons name="upload-file" size={56} color={borderColor} />
+          <ThemedText style={[styles.emptyTitle, { color: borderColor }]}>
+            还没有上传文书
           </ThemedText>
+          <ThemedText style={[styles.emptyText, { color: borderColor }]}>
+            前往「首页」上传地契图片{'\n'}系统将自动识别并提取结构化信息
+          </ThemedText>
+        </View>
+      )}
+
+      {data.total_images > 0 && data.total_analyzed === 0 && (
+        <View style={styles.emptyWrap}>
+          <MaterialIcons name="hourglass-empty" size={56} color={borderColor} />
+          <ThemedText style={[styles.emptyTitle, { color: borderColor }]}>
+            分析进行中
+          </ThemedText>
+          <ThemedText style={[styles.emptyText, { color: borderColor }]}>
+            已上传 {data.total_images} 份文书，AI 正在识别与分析{'\n'}分析完成后统计图表将自动显示
+          </ThemedText>
+          <Pressable style={[styles.retryBtn, { borderColor }]} onPress={() => loadData()}>
+            <ThemedText style={{ color: BLUE }}>刷新</ThemedText>
+          </Pressable>
         </View>
       )}
     </ScrollView>
@@ -357,8 +375,9 @@ const styles = StyleSheet.create({
   },
   lineXLabel: { fontSize: 10, opacity: 0.6 },
   emptyHint: { fontSize: 13, opacity: 0.5, textAlign: 'center', paddingVertical: 8 },
-  emptyWrap: { alignItems: 'center', paddingVertical: 32, gap: 12 },
-  emptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
+  emptyWrap: { alignItems: 'center', paddingVertical: 32, gap: 10 },
+  emptyTitle: { fontSize: 16, fontWeight: '600', marginTop: 4 },
+  emptyText: { fontSize: 13, textAlign: 'center', lineHeight: 20, opacity: 0.7 },
   retryBtn: {
     marginTop: 12,
     paddingHorizontal: 24,

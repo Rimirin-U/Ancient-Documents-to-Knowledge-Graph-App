@@ -433,9 +433,13 @@ export default function RecordScreen() {
       <AlertDialog
         isVisible={deleteDialogVisible}
         onClose={() => setDeleteDialogVisible(false)}
-        title="删除提示"
-        description={`确定要删除已选中的 ${selectedCount} 项吗？`}
-        confirmText="删除"
+        title={`删除 ${selectedCount} 项`}
+        description={
+          currentView === 'image'
+            ? `将永久删除所选 ${selectedCount} 份文书及其全部 OCR 结果、结构化数据和知识图谱，此操作不可撤销。`
+            : `将永久删除所选 ${selectedCount} 个跨文档分析任务及其关系图，此操作不可撤销。`
+        }
+        confirmText="确认删除"
         cancelText="取消"
         onConfirm={confirmBatchDelete}
         onCancel={() => setDeleteDialogVisible(false)}

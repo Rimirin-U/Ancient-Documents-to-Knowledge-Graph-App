@@ -6,13 +6,26 @@ import { getChartHtml } from "./echartsHtml";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const E_HEIGHT = 400;
 
-export function Chart({ option, onGesture, theme }: 
-  { option: any, onGesture: (isBusy: boolean) => void, theme: 'light'|'dark' }) {
+export type NodeClickData = {
+  name: string;
+  category: number | null;
+  properties: Record<string, unknown> | null;
+};
+
+export function Chart({
+  option,
+  onGesture,
+  theme,
+  onNodeClick,
+}: {
+  option: any;
+  onGesture: (isBusy: boolean) => void;
+  theme: 'light' | 'dark';
+  onNodeClick?: (node: NodeClickData) => void;
+}) {
   const webViewRef = useRef<WebView>(null);
 
-  // on option change
   useEffect(() => {
-    // legend 若为数组取第一项（ECharts 接受对象形式）
     const normalizedOption = { ...option };
     if (Array.isArray(normalizedOption.legend)) {
       normalizedOption.legend = normalizedOption.legend[0] || {};
@@ -30,8 +43,8 @@ export function Chart({ option, onGesture, theme }:
       backgroundColor: theme === 'dark' ? 'black' : 'white',
       borderColor: 'gray',
       borderStyle: 'dashed',
-      borderWidth: 1}}
-    >
+      borderWidth: 1,
+    }}>
       <WebView
         ref={webViewRef}
         originWhitelist={['*']}
@@ -41,9 +54,19 @@ export function Chart({ option, onGesture, theme }:
         javaScriptEnabled={true}
         domStorageEnabled={true}
         onMessage={(event) => {
-          const data = JSON.parse(event.nativeEvent.data);
-          if (data.type === 'gesture') {
-            onGesture(data.active); // 禁用ScrollView
+          try {
+            const data = JSON.parse(event.nativeEvent.data);
+            if (data.type === 'gesture') {
+              onGesture(data.active);
+            } else if (data.type === 'nodeClick' && onNodeClick) {
+              onNodeClick({
+                name: data.name,
+                category: data.category,
+                properties: data.properties,
+              });
+            }
+          } catch {
+            // 解析失败时静默忽略
           }
         }}
       />
