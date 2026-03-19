@@ -120,10 +120,18 @@ function NodeDetailModal({
   const categoryLabel = meta?.label ?? '实体';
   const badgeColor = meta?.color ?? '#64748b';
 
+  // 信息节点的 name 是内部 ID（__info_xxx），对用户显示第一条属性值或 category 名
+  const isInfoNode = node.category === 4;
+  const props = node.properties ?? {};
+  const firstPropValue = Object.values(props)[0];
+  const displayName = isInfoNode && firstPropValue
+    ? String(firstPropValue)
+    : node.name;
+
   // 属性列表：过滤掉空值
-  const extraProps = node.properties
-    ? Object.entries(node.properties).filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== '')
-    : [];
+  const extraProps = Object.entries(props).filter(
+    ([, v]) => v !== null && v !== undefined && String(v).trim() !== ''
+  );
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -135,15 +143,21 @@ function NodeDetailModal({
           {/* 标题行 */}
           <View style={styles.modalHeader}>
             <ThemedText style={[styles.modalTitle, { color: textColor }]} numberOfLines={2}>
-              {node.name}
+              {displayName}
             </ThemedText>
             <View style={[styles.categoryBadge, { backgroundColor: badgeColor + '1a', borderColor: badgeColor + '55' }]}>
               <ThemedText style={[styles.categoryText, { color: badgeColor }]}>{categoryLabel}</ThemedText>
             </View>
           </View>
 
-          {/* 属性列表 */}
-          {extraProps.length > 0 ? (
+          {/* 属性列表
+              信息节点（时间/地点/价格/标的）只有一个属性，其值已作为标题展示，
+              不再重复显示属性行，改为展示简短的字段说明 */}
+          {isInfoNode ? (
+            <ThemedText style={[styles.infoNodeHint, { color: subtleColor }]}>
+              {categoryLabel}属性 · 点击空白处关闭
+            </ThemedText>
+          ) : extraProps.length > 0 ? (
             <ScrollView style={styles.propsScroll} showsVerticalScrollIndicator={false}>
               {extraProps.map(([key, val], idx) => (
                 <View
@@ -217,9 +231,10 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
           fontSize: 12,
           color: isDark ? '#e2e8f0' : '#1e293b',
         },
-        // 边标签默认开启，per-link label.show=true 的边会显示关系文字
+        // 边标签：系列级默认关闭，只有后端显式标记 label.show=true 的边才展示
+        // （人物关系边显示"出卖/归属/见证/出售"，信息属性边不显示，避免重复）
         edgeLabel: {
-          show: true,
+          show: false,
           fontSize: 11,
           fontWeight: 'bold',
           backgroundColor: isDark ? 'rgba(15,23,42,0.82)' : 'rgba(255,255,255,0.88)',
@@ -334,6 +349,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     paddingVertical: 8,
+  },
+  infoNodeHint: {
+    fontSize: 12,
+    textAlign: 'center',
+    paddingVertical: 4,
   },
   closeBtn: {
     borderRadius: 8,
