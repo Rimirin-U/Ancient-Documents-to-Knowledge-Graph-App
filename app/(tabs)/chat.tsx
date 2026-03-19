@@ -4,7 +4,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColor } from '@/hooks/useColor';
 import { sendChatQuery } from '@/services/chat';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/services/storage';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -47,7 +47,7 @@ export default function ChatScreen() {
 
   // 启动时从本地加载历史消息
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
+    getStorageItem(STORAGE_KEY).then((raw) => {
       if (raw) {
         try {
           setMessages(JSON.parse(raw));
@@ -56,10 +56,11 @@ export default function ChatScreen() {
     });
   }, []);
 
-  // 消息变化时持久化
+  // 消息变化时持久化（只保留最近 30 条，防止超出存储限制）
   useEffect(() => {
     if (messages.length > 0) {
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+      const toSave = messages.slice(-30);
+      setStorageItem(STORAGE_KEY, JSON.stringify(toSave));
     }
   }, [messages]);
 
@@ -72,7 +73,7 @@ export default function ChatScreen() {
 
   function handleClear() {
     setMessages([]);
-    AsyncStorage.removeItem(STORAGE_KEY);
+    removeStorageItem(STORAGE_KEY);
   }
 
   async function handleSend() {
