@@ -2,18 +2,33 @@ import { ThemedView } from "@/components/themed-view";
 import { Button } from '@/components/ui/button';
 import { MediaAsset, MediaPicker } from '@/components/ui/media-picker';
 import { useToast } from '@/components/ui/toast';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { StyleSheet } from "react-native";
 import { uploadImage as uploadImageService } from "@/services/analysis";
 
+/** 上传前压缩图片，目标宽度 1920px、JPEG 质量 0.82，减少上传流量 */
+async function compressImage(uri: string): Promise<string> {
+  try {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 1920 } }],
+      { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG }
+    );
+    return result.uri;
+  } catch {
+    return uri;
+  }
+}
 
 export default function Index() {
   const toast = useToast();
 
-  // 上传图片
   const uploadImage = async (uri: string, fileName: string) => {
     try {
-      await uploadImageService(uri, fileName);
+      const compressedUri = await compressImage(uri);
+      const jpgFileName = fileName.replace(/\.[^.]+$/, '') + '.jpg';
+      await uploadImageService(compressedUri, jpgFileName);
       toast.success('上传成功', '上传成功，后台分析中');
     } catch (error) {
       console.error(error);

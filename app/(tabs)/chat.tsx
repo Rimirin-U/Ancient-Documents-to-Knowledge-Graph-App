@@ -3,7 +3,7 @@ import { useToast } from '@/components/ui/toast';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColor } from '@/hooks/useColor';
-import { sendChatQuery } from '@/services/chat';
+import { sendChatQuery, ChatSource } from '@/services/chat';
 import { getStorageItem, setStorageItem, removeStorageItem } from '@/services/storage';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useRef, useState } from 'react';
@@ -23,8 +23,41 @@ type Message = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  sources?: ChatSource[];
   createdAt: number;
 };
+
+function SourceCard({ source, cardBg, textColor }: { source: ChatSource; cardBg: string; textColor: string }) {
+  const hasTime = source.time && source.time !== '未识别';
+  const hasLocation = source.location && source.location !== '未识别';
+  return (
+    <View style={[styles.sourceCard, { backgroundColor: cardBg }]}>
+      <View style={styles.sourceHeader}>
+        <View style={styles.sourceIndexBadge}>
+          <ThemedText style={styles.sourceIndexText}>[{source.index}]</ThemedText>
+        </View>
+        <ThemedText style={[styles.sourceFilename, { color: textColor }]} numberOfLines={1}>
+          {source.filename || '未知文件'}
+        </ThemedText>
+      </View>
+      {(hasTime || hasLocation) && (
+        <View style={styles.sourceMeta}>
+          {hasTime && (
+            <ThemedText style={styles.sourceMetaText}>📅 {source.time}</ThemedText>
+          )}
+          {hasLocation && (
+            <ThemedText style={styles.sourceMetaText}>📍 {source.location}</ThemedText>
+          )}
+        </View>
+      )}
+      {source.excerpt && (
+        <ThemedText style={[styles.sourceExcerpt, { color: textColor }]} numberOfLines={2}>
+          {source.excerpt}
+        </ThemedText>
+      )}
+    </View>
+  );
+}
 
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
@@ -35,6 +68,7 @@ export default function ChatScreen() {
   const messageUserBg = useColor('tint', { light: '#0a7ea4', dark: '#0a7ea4' });
   const messageUserText = '#ffffff';
   const messageBotBg = useColor('background', { light: '#ffffff', dark: '#21262e' });
+  const sourceCardBg = useColor('background', { light: '#f0f4f8', dark: '#2a3040' });
   const inputBg = useColor('background', { light: '#ffffff', dark: '#21262e' });
   const borderColor = useColor('icon', { light: '#d7dae0', dark: '#3a414c' });
   const textColor = useColor('text', {});
@@ -45,7 +79,6 @@ export default function ChatScreen() {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // 启动时从本地加载历史消息
   useEffect(() => {
     getStorageItem(STORAGE_KEY).then((raw) => {
       if (raw) {
@@ -56,7 +89,6 @@ export default function ChatScreen() {
     });
   }, []);
 
-  // 消息变化时持久化（只保留最近 30 条，防止超出存储限制）
   useEffect(() => {
     if (messages.length > 0) {
       const toSave = messages.slice(-30);
@@ -64,7 +96,6 @@ export default function ChatScreen() {
     }
   }, [messages]);
 
-  // 滚动到底部
   useEffect(() => {
     setTimeout(() => {
       listRef.current?.scrollToEnd({ animated: true });
@@ -92,11 +123,12 @@ export default function ChatScreen() {
     setLoading(true);
 
     try {
-      const reply = await sendChatQuery(text);
+      const data = await sendChatQuery(text);
       const botMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: reply,
+        content: data.answer,
+        sources: data.sources?.length ? data.sources : undefined,
         createdAt: Date.now(),
       };
       setMessages((prev) => [...prev, botMsg]);
@@ -130,21 +162,41 @@ export default function ChatScreen() {
               item.role === 'user' ? styles.messageRowUser : styles.messageRowBot,
             ]}
           >
-            <View
-              style={[
-                styles.messageBubble,
-                {
-                  backgroundColor: item.role === 'user' ? messageUserBg : messageBotBg,
-                },
-              ]}
-            >
-              <ThemedText
-                style={{
-                  color: item.role === 'user' ? messageUserText : textColor,
-                }}
+            <View style={styles.messageColumn}>
+              <View
+                style={[
+                  styles.messageBubble,
+                  {
+                    backgroundColor: item.role === 'user' ? messageUserBg : messageBotBg,
+                    alignSelf: item.role === 'user' ? 'flex-end' : 'flex-start',
+                  },
+                ]}
               >
-                {item.content}
-              </ThemedText>
+                <ThemedText
+                  style={{
+                    color: item.role === 'user' ? messageUserText : textColor,
+                  }}
+                >
+                  {item.content}
+                </ThemedText>
+              </View>
+
+              {/* 引用溯源卡片（仅 assistant 消息，且有 sources）*/}
+              {item.role === 'assistant' && item.sources && item.sources.length > 0 && (
+                <View style={styles.sourcesContainer}>
+                  <ThemedText style={[styles.sourcesLabel, { color: borderColor }]}>
+                    参考文书：
+                  </ThemedText>
+                  {item.sources.map((src) => (
+                    <SourceCard
+                      key={src.index}
+                      source={src}
+                      cardBg={sourceCardBg}
+                      textColor={textColor}
+                    />
+                  ))}
+                </View>
+              )}
             </View>
           </View>
         )}
@@ -190,9 +242,7 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   listContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
@@ -207,16 +257,64 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     width: '100%',
   },
-  messageRowUser: {
-    justifyContent: 'flex-end',
-  },
-  messageRowBot: {
-    justifyContent: 'flex-start',
+  messageRowUser: { justifyContent: 'flex-end' },
+  messageRowBot: { justifyContent: 'flex-start' },
+  messageColumn: {
+    maxWidth: '85%',
+    gap: 6,
   },
   messageBubble: {
     padding: 12,
     borderRadius: 12,
-    maxWidth: '80%',
+  },
+  sourcesContainer: {
+    gap: 4,
+    paddingLeft: 4,
+  },
+  sourcesLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  sourceCard: {
+    borderRadius: 8,
+    padding: 8,
+    gap: 3,
+  },
+  sourceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  sourceIndexBadge: {
+    backgroundColor: '#0a7ea4',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  sourceIndexText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  sourceFilename: {
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
+  },
+  sourceMeta: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  sourceMetaText: {
+    fontSize: 11,
+    opacity: 0.7,
+  },
+  sourceExcerpt: {
+    fontSize: 11,
+    opacity: 0.6,
+    lineHeight: 16,
   },
   inputContainer: {
     paddingHorizontal: 12,
@@ -256,7 +354,5 @@ const styles = StyleSheet.create({
     gap: 4,
     padding: 4,
   },
-  clearText: {
-    fontSize: 13,
-  },
+  clearText: { fontSize: 13 },
 });

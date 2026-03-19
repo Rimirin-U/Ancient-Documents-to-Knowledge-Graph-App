@@ -32,7 +32,7 @@ import {
 } from '@/services/analysis';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -253,45 +253,57 @@ export default function ImageDetailScreen() {
     };
   }, [relationGraphIds, selectedRelationIndex]);
 
-  // 轮询：OCR 处理中时自动刷新
+  // 轮询：OCR 处理中时自动刷新（指数退避：1.5s → 3s → 6s → 最大 10s）
+  const ocrRetryCount = useRef(0);
   useEffect(() => {
-    if (!selectedOcr || selectedOcr.status === 'done' || selectedOcr.status === 'failed') return;
-
+    if (!selectedOcr || selectedOcr.status === 'done' || selectedOcr.status === 'failed') {
+      ocrRetryCount.current = 0;
+      return;
+    }
+    const delay = Math.min(1500 * Math.pow(1.5, ocrRetryCount.current), 10000);
     const timer = setTimeout(async () => {
       try {
         const updated = await getOcrDetail(selectedOcr.id);
+        ocrRetryCount.current += 1;
         setSelectedOcr(updated);
       } catch {}
-    }, 3000);
-
+    }, delay);
     return () => clearTimeout(timer);
   }, [selectedOcr]);
 
-  // 轮询：结构化分析处理中时自动刷新
+  // 轮询：结构化分析处理中时自动刷新（指数退避）
+  const structuredRetryCount = useRef(0);
   useEffect(() => {
-    if (!selectedStructured || selectedStructured.status === 'done' || selectedStructured.status === 'failed') return;
-
+    if (!selectedStructured || selectedStructured.status === 'done' || selectedStructured.status === 'failed') {
+      structuredRetryCount.current = 0;
+      return;
+    }
+    const delay = Math.min(1500 * Math.pow(1.5, structuredRetryCount.current), 10000);
     const timer = setTimeout(async () => {
       try {
         const updated = await getStructuredDetail(selectedStructured.id);
+        structuredRetryCount.current += 1;
         setSelectedStructured(updated);
       } catch {}
-    }, 3000);
-
+    }, delay);
     return () => clearTimeout(timer);
   }, [selectedStructured]);
 
-  // 轮询：关系图处理中时自动刷新
+  // 轮询：关系图处理中时自动刷新（指数退避）
+  const relationRetryCount = useRef(0);
   useEffect(() => {
-    if (!selectedRelation || selectedRelation.status === 'done' || selectedRelation.status === 'failed') return;
-
+    if (!selectedRelation || selectedRelation.status === 'done' || selectedRelation.status === 'failed') {
+      relationRetryCount.current = 0;
+      return;
+    }
+    const delay = Math.min(1500 * Math.pow(1.5, relationRetryCount.current), 10000);
     const timer = setTimeout(async () => {
       try {
         const updated = await getRelationGraphDetail(selectedRelation.id);
+        relationRetryCount.current += 1;
         setSelectedRelation(updated);
       } catch {}
-    }, 3000);
-
+    }, delay);
     return () => clearTimeout(timer);
   }, [selectedRelation]);
 

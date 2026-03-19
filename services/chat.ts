@@ -1,8 +1,18 @@
 import { API_BASE_URL, authHeaders } from './api';
 
-type ChatResponseData = {
+export type ChatSource = {
+  index: number;
+  doc_id: string | number;
+  image_id: string | number;
+  filename: string;
+  time: string;
+  location: string;
+  excerpt: string;
+};
+
+export type ChatResponseData = {
   answer: string;
-  sources: string[];
+  sources: ChatSource[];
 };
 
 type ChatResponse = {
@@ -11,7 +21,7 @@ type ChatResponse = {
   detail?: string;
 };
 
-export async function sendChatQuery(question: string): Promise<string> {
+export async function sendChatQuery(question: string): Promise<ChatResponseData> {
   const headers = {
     ...(await authHeaders()),
     'Content-Type': 'application/json',
@@ -23,7 +33,6 @@ export async function sendChatQuery(question: string): Promise<string> {
     body: JSON.stringify({ question }),
   });
 
-  // 先读文本，再解析 JSON，避免非 JSON 响应直接崩溃
   const rawText = await response.text();
   let result: ChatResponse;
   try {
@@ -36,5 +45,5 @@ export async function sendChatQuery(question: string): Promise<string> {
     throw new Error(result.detail || '发送消息失败');
   }
 
-  return result.data.answer;
+  return result.data;
 }
