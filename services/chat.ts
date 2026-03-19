@@ -23,7 +23,14 @@ export async function sendChatQuery(question: string): Promise<string> {
     body: JSON.stringify({ question }),
   });
 
-  const result = (await response.json()) as ChatResponse;
+  // 先读文本，再解析 JSON，避免非 JSON 响应直接崩溃
+  const rawText = await response.text();
+  let result: ChatResponse;
+  try {
+    result = JSON.parse(rawText) as ChatResponse;
+  } catch {
+    throw new Error(`服务器响应异常 (HTTP ${response.status}): ${rawText.slice(0, 200)}`);
+  }
 
   if (!response.ok || !result.success) {
     throw new Error(result.detail || '发送消息失败');
