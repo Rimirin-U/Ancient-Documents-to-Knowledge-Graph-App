@@ -126,7 +126,7 @@ export default function ChatScreen() {
     setReindexing(true);
     try {
       const msg = await triggerReindex();
-      toast.show('info', '重建中', msg);
+      toast.info('重建知识库', msg);
       // 2 秒后刷新知识库文档数
       setTimeout(() => getKbStatus().then(setKbCount), 2000);
     } catch (err) {
