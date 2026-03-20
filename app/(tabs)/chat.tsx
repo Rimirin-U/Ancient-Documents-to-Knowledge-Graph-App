@@ -438,7 +438,9 @@ export default function ChatScreen() {
             <ThemedText style={[styles.emptySubtitle, { color: subTextColor }]}>
               {kbCount != null && kbCount > 0
                 ? `当前知识库包含 ${kbCount} 份文书，可以这样提问：`
-                : '上传并完成 OCR 识别后，可以这样提问：'}
+                : kbCount === 0
+                  ? '知识库暂无文书，请点击右上角 ↻ 重建索引后再提问'
+                  : '上传并完成 OCR 识别后，可以这样提问：'}
             </ThemedText>
             <View style={styles.suggestionsWrap}>
               {EXAMPLE_QUESTIONS.map((q) => (
