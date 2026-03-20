@@ -128,7 +128,9 @@ export async function sendChatQueryStream(
 
   const reader = response.body?.getReader();
   if (!reader) {
-    onError('当前环境不支持流式响应，请尝试升级客户端');
+    // 当前运行环境（如 Expo Go / React Native fetch 层）不支持 ReadableStream，
+    // 用特殊状态码 -1 通知调用方自动降级到非流式接口
+    onError('streaming_not_supported', -1);
     return;
   }
 

@@ -286,8 +286,8 @@ export default function ChatScreen() {
         setLoading(false);
       },
       async onError(errorMsg, status) {
-        // 流式接口不存在（服务端尚未更新），自动降级到非流式接口
-        if (status === 404) {
+        // 流式接口不可用（服务端未更新 / 环境不支持 ReadableStream），自动降级到非流式接口
+        if (status === 404 || status === -1) {
           try {
             const data = await sendChatQuery(text, history);
             setMessages((prev) =>
