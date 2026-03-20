@@ -5,18 +5,27 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 type ImagePreviewPanelProps = {
   imageUri?: string;
+  /** 与详情 imageId 一致，避免 expo-image 复用上一张图的纹理 */
+  recyclingKey?: string;
   loading: boolean;
   onPressImage: () => void;
 };
 
-export function ImagePreviewPanel({ imageUri, loading, onPressImage }: ImagePreviewPanelProps) {
+export function ImagePreviewPanel({ imageUri, recyclingKey, loading, onPressImage }: ImagePreviewPanelProps) {
   const surface = useColor('background', { light: '#f6f7f9', dark: '#1d2229' });
 
   return (
     <View style={[styles.container, { backgroundColor: surface }]}> 
       {imageUri ? (
         <Pressable style={styles.imageWrap} onPress={onPressImage}>
-          <Image source={{ uri: imageUri }} contentFit="contain" variant="default" style={styles.image} containerStyle={{ backgroundColor: surface }} />
+          <Image
+            source={{ uri: imageUri }}
+            recyclingKey={recyclingKey ?? imageUri}
+            contentFit="contain"
+            variant="default"
+            style={styles.image}
+            containerStyle={{ backgroundColor: surface }}
+          />
         </Pressable>
       ) : (
         <View style={styles.placeholder}>

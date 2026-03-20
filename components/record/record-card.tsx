@@ -79,6 +79,7 @@ function RecordCardBase({
           {!imageFailed && imageSource ? (
             <Image
               source={imageSource}
+              recyclingKey={`record-thumb-${item.id}`}
               contentFit="cover"
               variant="default"
               style={styles.image}

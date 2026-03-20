@@ -76,7 +76,13 @@ function CrossDocCardBase({
                   },
                 ]}
               >
-                <Image source={{ uri: url }} contentFit="cover" variant="default" style={styles.image} />
+                <Image
+                  source={{ uri: url }}
+                  recyclingKey={`cross-doc-${item.id}-p${index}`}
+                  contentFit="cover"
+                  variant="default"
+                  style={styles.image}
+                />
               </View>
             ))
           ) : (

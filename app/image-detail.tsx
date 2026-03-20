@@ -115,6 +115,8 @@ export default function ImageDetailScreen() {
 
     if (showLoading) {
       setLoading(true);
+      // 避免从其他记录进入时仍短暂显示上一张 data URL
+      setImageDataUrl('');
     }
     setErrorMessage('');
 
@@ -432,6 +434,7 @@ export default function ImageDetailScreen() {
       <View style={[styles.imageArea, { height: imageHeight, backgroundColor: pageSurface }]}>
         <ImagePreviewPanel
           imageUri={imageDataUrl}
+          recyclingKey={Number.isFinite(imageId) ? `detail-${imageId}` : undefined}
           loading={loading}
           onPressImage={() => setPreviewVisible(true)}
         />
