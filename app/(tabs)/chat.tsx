@@ -4,6 +4,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColor } from '@/hooks/useColor';
 import {
+  sendChatQuery,
   sendChatQueryStream,
   getKbStatus,
   triggerReindex,
@@ -284,7 +285,30 @@ export default function ChatScreen() {
         );
         setLoading(false);
       },
-      onError(errorMsg) {
+      async onError(errorMsg, status) {
+        // 流式接口不存在（服务端尚未更新），自动降级到非流式接口
+        if (status === 404) {
+          try {
+            const data = await sendChatQuery(text, history);
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === botMsgId
+                  ? {
+                      ...m,
+                      content: data.answer,
+                      sources: data.sources?.length ? data.sources : undefined,
+                      isTyping: false,
+                    }
+                  : m,
+              ),
+            );
+          } catch (fallbackErr) {
+            setMessages((prev) => prev.filter((m) => m.id !== botMsgId));
+            toast.error('问答失败', fallbackErr instanceof Error ? fallbackErr.message : '发送失败');
+          }
+          setLoading(false);
+          return;
+        }
         setMessages((prev) => prev.filter((m) => m.id !== botMsgId));
         toast.error('问答失败', errorMsg);
         setLoading(false);

@@ -79,8 +79,8 @@ export type StreamCallbacks = {
   onSources: (sources: ChatSource[]) => void;
   /** 流正常结束 */
   onDone: () => void;
-  /** 发生错误 */
-  onError: (message: string) => void;
+  /** 发生错误，status 为 HTTP 状态码（若有） */
+  onError: (message: string, status?: number) => void;
 };
 
 /**
@@ -122,7 +122,7 @@ export async function sendChatQueryStream(
       const text = await response.text();
       detail = JSON.parse(text).detail || detail;
     } catch {}
-    onError(detail);
+    onError(detail, response.status);
     return;
   }
 
