@@ -35,6 +35,7 @@ type KbStatusResponse = {
   data: { indexed_count: number };
 };
 
+/** 非流式问答（保留作备用） */
 export async function sendChatQuery(
   question: string,
   history?: ChatHistoryTurn[],
@@ -46,7 +47,7 @@ export async function sendChatQuery(
 
   const body: Record<string, unknown> = { question };
   if (history && history.length > 0) {
-    body.history = history.slice(-8); // 最多传最近 8 条（4 轮）
+    body.history = history.slice(-8);
   }
 
   const response = await fetch(`${API_BASE_URL}/api/v1/chat/query`, {
@@ -68,6 +69,117 @@ export async function sendChatQuery(
   }
 
   return result.data;
+}
+
+/** SSE 流式问答回调类型 */
+export type StreamCallbacks = {
+  /** 每个文本增量块到达时调用 */
+  onText: (delta: string) => void;
+  /** 引用来源就绪（通常在文本流之前触发）*/
+  onSources: (sources: ChatSource[]) => void;
+  /** 流正常结束 */
+  onDone: () => void;
+  /** 发生错误 */
+  onError: (message: string) => void;
+};
+
+/**
+ * 流式问答（SSE）。
+ * 后端依次推送：sources → text delta × N → done
+ */
+export async function sendChatQueryStream(
+  question: string,
+  history: ChatHistoryTurn[] | undefined,
+  callbacks: StreamCallbacks,
+): Promise<void> {
+  const { onText, onSources, onDone, onError } = callbacks;
+
+  const headers = {
+    ...(await authHeaders()),
+    'Content-Type': 'application/json',
+  };
+
+  const body: Record<string, unknown> = { question };
+  if (history && history.length > 0) {
+    body.history = history.slice(-8);
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/v1/chat/query-stream`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    onError(err instanceof Error ? err.message : '网络连接失败，请检查网络后重试');
+    return;
+  }
+
+  if (!response.ok) {
+    let detail = `服务器错误 (${response.status})`;
+    try {
+      const text = await response.text();
+      detail = JSON.parse(text).detail || detail;
+    } catch {}
+    onError(detail);
+    return;
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    onError('当前环境不支持流式响应，请尝试升级客户端');
+    return;
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // 按换行切割，保留末尾未完成的行
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const jsonStr = line.slice(6).trim();
+        if (!jsonStr) continue;
+
+        try {
+          const event = JSON.parse(jsonStr) as {
+            type: string;
+            delta?: string;
+            sources?: ChatSource[];
+            message?: string;
+          };
+
+          if (event.type === 'text' && event.delta) {
+            onText(event.delta);
+          } else if (event.type === 'sources' && event.sources) {
+            onSources(event.sources);
+          } else if (event.type === 'done') {
+            onDone();
+            return;
+          } else if (event.type === 'error') {
+            onError(event.message || '未知错误，请稍后重试');
+            return;
+          }
+        } catch {
+          // 忽略格式异常的行
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  onDone();
 }
 
 export async function getKbStatus(): Promise<number> {

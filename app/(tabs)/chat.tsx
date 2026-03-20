@@ -3,12 +3,21 @@ import { useToast } from '@/components/ui/toast';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColor } from '@/hooks/useColor';
-import { sendChatQuery, getKbStatus, triggerReindex, ChatSource, ChatHistoryTurn } from '@/services/chat';
+import {
+  sendChatQueryStream,
+  getKbStatus,
+  triggerReindex,
+  ChatSource,
+  ChatHistoryTurn,
+} from '@/services/chat';
 import { getStorageItem, setStorageItem, removeStorageItem } from '@/services/storage';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -25,6 +34,7 @@ const EXAMPLE_QUESTIONS = [
   '交易价格最高的文书是哪份？',
   '有哪些地契来自同一地区？',
   '这些文书的时间跨度是多少年？',
+  '谁同时在多份文书中出现？',
 ];
 
 type Message = {
@@ -32,18 +42,91 @@ type Message = {
   role: 'user' | 'assistant';
   content: string;
   sources?: ChatSource[];
+  isTyping?: boolean;
   createdAt: number;
 };
 
+const STORAGE_KEY = 'chat_messages_v2';
+
 const VALID = (v?: string) => v && v !== '未识别' && v !== '未记载';
 
-function SourceCard({ source, cardBg, textColor }: { source: ChatSource; cardBg: string; textColor: string }) {
+/** 格式化消息时间戳 */
+function formatTime(ts: number): string {
+  const date = new Date(ts);
+  const now = new Date();
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  const timeStr = `${hh}:${mm}`;
+  const diffDays = Math.floor((now.getTime() - ts) / 86_400_000);
+  if (diffDays === 0) return timeStr;
+  if (diffDays === 1) return `昨天 ${timeStr}`;
+  const mo = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${mo}/${dd} ${timeStr}`;
+}
+
+/** 三点打字动效（等待 AI 回答时显示） */
+function TypingIndicator({ bg }: { bg: string }) {
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const makeLoop = (dot: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0, duration: 300, useNativeDriver: true }),
+          Animated.delay(Math.max(0, 1200 - delay - 600)),
+        ]),
+      );
+
+    const anim = Animated.parallel([makeLoop(dot1, 0), makeLoop(dot2, 150), makeLoop(dot3, 300)]);
+    anim.start();
+    return () => anim.stop();
+  }, [dot1, dot2, dot3]);
+
+  return (
+    <View style={[styles.messageBubble, styles.typingBubble, { backgroundColor: bg }]}>
+      {[dot1, dot2, dot3].map((dot, i) => (
+        <Animated.View
+          key={i}
+          style={[
+            styles.typingDot,
+            {
+              transform: [
+                {
+                  translateY: dot.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, -5],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+function SourceCard({
+  source,
+  cardBg,
+  textColor,
+}: {
+  source: ChatSource;
+  cardBg: string;
+  textColor: string;
+}) {
   const metaItems: { icon: string; label: string; value: string }[] = [];
   if (VALID(source.time))     metaItems.push({ icon: '📅', label: '时间', value: source.time });
   if (VALID(source.location)) metaItems.push({ icon: '📍', label: '地点', value: source.location });
   if (VALID(source.seller))   metaItems.push({ icon: '👤', label: '卖方', value: source.seller });
   if (VALID(source.buyer))    metaItems.push({ icon: '👤', label: '买方', value: source.buyer });
   if (VALID(source.price))    metaItems.push({ icon: '💰', label: '价格', value: source.price });
+  if (VALID(source.subject))  metaItems.push({ icon: '📜', label: '标的', value: source.subject });
 
   return (
     <View style={[styles.sourceCard, { backgroundColor: cardBg }]}>
@@ -78,16 +161,14 @@ export default function ChatScreen() {
   const toast = useToast();
   const listRef = useRef<FlatList>(null);
 
-  const pageBg = useColor('background', { light: '#eceef1', dark: '#121418' });
-  const messageUserBg = useColor('tint', { light: '#0a7ea4', dark: '#0a7ea4' });
-  const messageUserText = '#ffffff';
-  const messageBotBg = useColor('background', { light: '#ffffff', dark: '#21262e' });
-  const sourceCardBg = useColor('background', { light: '#f0f4f8', dark: '#2a3040' });
-  const inputBg = useColor('background', { light: '#ffffff', dark: '#21262e' });
-  const borderColor = useColor('icon', { light: '#d7dae0', dark: '#3a414c' });
-  const textColor = useColor('text', {});
-
-  const STORAGE_KEY = 'chat_messages';
+  const pageBg        = useColor('background', { light: '#eceef1', dark: '#121418' });
+  const messageUserBg = useColor('tint',       { light: '#0a7ea4', dark: '#0a7ea4' });
+  const messageBotBg  = useColor('background', { light: '#ffffff', dark: '#21262e' });
+  const sourceCardBg  = useColor('background', { light: '#f0f4f8', dark: '#2a3040' });
+  const inputBg       = useColor('background', { light: '#ffffff', dark: '#21262e' });
+  const borderColor   = useColor('icon',       { light: '#d7dae0', dark: '#3a414c' });
+  const textColor     = useColor('text',       {});
+  const subTextColor  = useColor('icon',       { light: '#9aa0aa', dark: '#6b7280' });
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -95,26 +176,32 @@ export default function ChatScreen() {
   const [kbCount, setKbCount] = useState<number | null>(null);
   const [reindexing, setReindexing] = useState(false);
 
+  // 从本地存储恢复历史消息
   useEffect(() => {
     getStorageItem(STORAGE_KEY).then((raw) => {
       if (raw) {
-        try { setMessages(JSON.parse(raw)); } catch (_) {}
+        try {
+          setMessages(JSON.parse(raw));
+        } catch (_) {}
       }
     });
     getKbStatus().then(setKbCount);
   }, []);
 
+  // 持久化消息（最多保存 30 条）
   useEffect(() => {
     if (messages.length > 0) {
-      const toSave = messages.slice(-30);
+      const toSave = messages.filter((m) => !m.isTyping).slice(-30);
       setStorageItem(STORAGE_KEY, JSON.stringify(toSave));
     }
   }, [messages]);
 
+  // 新消息时滚动到底部
   useEffect(() => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       listRef.current?.scrollToEnd({ animated: true });
-    }, 100);
+    }, 80);
+    return () => clearTimeout(timer);
   }, [messages]);
 
   function handleClear() {
@@ -127,7 +214,6 @@ export default function ChatScreen() {
     try {
       const msg = await triggerReindex();
       toast.info('重建知识库', msg);
-      // 2 秒后刷新知识库文档数
       setTimeout(() => getKbStatus().then(setKbCount), 2000);
     } catch (err) {
       toast.error('失败', err instanceof Error ? err.message : '重建失败');
@@ -138,73 +224,110 @@ export default function ChatScreen() {
 
   async function handleSend() {
     const text = inputText.trim();
-    if (!text) return;
+    if (!text || loading) return;
 
     const userMsg: Message = {
-      id: Date.now().toString(),
+      id: `user_${Date.now()}`,
       role: 'user',
       content: text,
       createdAt: Date.now(),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const botMsgId = `bot_${Date.now() + 1}`;
+    const placeholderMsg: Message = {
+      id: botMsgId,
+      role: 'assistant',
+      content: '',
+      isTyping: true,
+      createdAt: Date.now() + 1,
+    };
+
+    // 取历史（不含占位符）
+    const history: ChatHistoryTurn[] = messages
+      .filter((m) => !m.isTyping)
+      .slice(-8)
+      .map((m) => ({ role: m.role, content: m.content }));
+
+    setMessages((prev) => [...prev, userMsg, placeholderMsg]);
     setInputText('');
     setLoading(true);
 
-    try {
-      // 传入近期对话历史，支持多轮连续问答
-      const history: ChatHistoryTurn[] = messages.slice(-8).map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-      const data = await sendChatQuery(text, history);
-      const botMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.answer,
-        sources: data.sources?.length ? data.sources : undefined,
-        createdAt: Date.now(),
-      };
-      setMessages((prev) => [...prev, botMsg]);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : '发送失败';
-      toast.error('错误', message);
-    } finally {
-      setLoading(false);
-    }
+    let pendingSources: ChatSource[] | undefined;
+    let accumulatedText = '';
+
+    await sendChatQueryStream(text, history, {
+      onText(delta) {
+        accumulatedText += delta;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === botMsgId
+              ? { ...m, content: accumulatedText, isTyping: false }
+              : m,
+          ),
+        );
+      },
+      onSources(sources) {
+        pendingSources = sources.length > 0 ? sources : undefined;
+      },
+      onDone() {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === botMsgId
+              ? {
+                  ...m,
+                  content: accumulatedText || '（未生成回答，请重试）',
+                  sources: pendingSources,
+                  isTyping: false,
+                }
+              : m,
+          ),
+        );
+        setLoading(false);
+      },
+      onError(errorMsg) {
+        setMessages((prev) => prev.filter((m) => m.id !== botMsgId));
+        toast.error('问答失败', errorMsg);
+        setLoading(false);
+      },
+    });
+  }
+
+  /** 长按消息：复制内容 + 震动反馈 */
+  async function handleLongPress(content: string) {
+    await Clipboard.setStringAsync(content);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    toast.info('已复制', '消息内容已复制到剪贴板');
   }
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: pageBg }]}>
+      {/* 顶部状态栏 */}
       <View style={[styles.topBar, { borderBottomColor: borderColor }]}>
-        {/* 知识库状态 */}
-        <Pressable
-          onPress={() => getKbStatus().then(setKbCount)}
-          style={styles.kbStatus}
-        >
-          <MaterialIcons name="library-books" size={14} color={borderColor} />
-          <ThemedText style={[styles.kbStatusText, { color: borderColor }]}>
+        <Pressable onPress={() => getKbStatus().then(setKbCount)} style={styles.kbStatus}>
+          <MaterialIcons name="library-books" size={14} color={subTextColor} />
+          <ThemedText style={[styles.kbStatusText, { color: subTextColor }]}>
             {kbCount === null ? '加载中…' : `知识库 ${kbCount} 份文书`}
           </ThemedText>
         </Pressable>
 
         <View style={styles.topBarActions}>
-          {/* 重建索引按钮 */}
           <Pressable onPress={handleReindex} disabled={reindexing} style={styles.iconBtn}>
-            {reindexing
-              ? <ActivityIndicator size={14} color={borderColor} />
-              : <MaterialIcons name="sync" size={16} color={borderColor} />
-            }
+            {reindexing ? (
+              <ActivityIndicator size={14} color={subTextColor} />
+            ) : (
+              <MaterialIcons name="sync" size={16} color={subTextColor} />
+            )}
           </Pressable>
-          {/* 清空记录按钮 */}
           {messages.length > 0 && (
             <Pressable onPress={handleClear} style={styles.clearBtn}>
-              <MaterialIcons name="delete-outline" size={16} color={borderColor} />
-              <ThemedText style={[styles.clearText, { color: borderColor }]}>清空</ThemedText>
+              <MaterialIcons name="delete-outline" size={16} color={subTextColor} />
+              <ThemedText style={[styles.clearText, { color: subTextColor }]}>清空</ThemedText>
             </Pressable>
           )}
         </View>
       </View>
+
+      {/* 消息列表 */}
       <FlatList
         ref={listRef}
         data={messages}
@@ -218,28 +341,55 @@ export default function ChatScreen() {
             ]}
           >
             <View style={styles.messageColumn}>
-              <View
-                style={[
-                  styles.messageBubble,
-                  {
-                    backgroundColor: item.role === 'user' ? messageUserBg : messageBotBg,
-                    alignSelf: item.role === 'user' ? 'flex-end' : 'flex-start',
-                  },
-                ]}
-              >
-                <ThemedText
-                  style={{
-                    color: item.role === 'user' ? messageUserText : textColor,
-                  }}
+              {/* 气泡 */}
+              {item.isTyping && !item.content ? (
+                <TypingIndicator bg={messageBotBg} />
+              ) : (
+                <Pressable
+                  onLongPress={() => handleLongPress(item.content)}
+                  delayLongPress={400}
                 >
-                  {item.content}
-                </ThemedText>
-              </View>
+                  <View
+                    style={[
+                      styles.messageBubble,
+                      {
+                        backgroundColor:
+                          item.role === 'user' ? messageUserBg : messageBotBg,
+                        alignSelf: item.role === 'user' ? 'flex-end' : 'flex-start',
+                      },
+                    ]}
+                  >
+                    <ThemedText
+                      style={{
+                        color: item.role === 'user' ? '#ffffff' : textColor,
+                        lineHeight: 22,
+                      }}
+                    >
+                      {item.content}
+                    </ThemedText>
+                  </View>
+                </Pressable>
+              )}
 
-              {/* 引用溯源卡片（仅 assistant 消息，且有 sources）*/}
+              {/* 时间戳 */}
+              {!item.isTyping && (
+                <ThemedText
+                  style={[
+                    styles.timestamp,
+                    {
+                      color: subTextColor,
+                      alignSelf: item.role === 'user' ? 'flex-end' : 'flex-start',
+                    },
+                  ]}
+                >
+                  {formatTime(item.createdAt)}
+                </ThemedText>
+              )}
+
+              {/* 引用溯源卡片（仅 assistant 且有 sources） */}
               {item.role === 'assistant' && item.sources && item.sources.length > 0 && (
                 <View style={styles.sourcesContainer}>
-                  <ThemedText style={[styles.sourcesLabel, { color: borderColor }]}>
+                  <ThemedText style={[styles.sourcesLabel, { color: subTextColor }]}>
                     参考文书：
                   </ThemedText>
                   {item.sources.map((src) => (
@@ -257,12 +407,12 @@ export default function ChatScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
-            <MaterialIcons name="chat-bubble-outline" size={48} color={borderColor} />
-            <ThemedText style={[styles.emptyTitle, { color: borderColor }]}>
+            <MaterialIcons name="chat-bubble-outline" size={48} color={subTextColor} />
+            <ThemedText style={[styles.emptyTitle, { color: textColor }]}>
               文档智能问答
             </ThemedText>
-            <ThemedText style={[styles.emptySubtitle, { color: borderColor }]}>
-              {kbCount !== null && kbCount > 0
+            <ThemedText style={[styles.emptySubtitle, { color: subTextColor }]}>
+              {kbCount != null && kbCount > 0
                 ? `当前知识库包含 ${kbCount} 份文书，可以这样提问：`
                 : '上传并完成 OCR 识别后，可以这样提问：'}
             </ThemedText>
@@ -270,10 +420,15 @@ export default function ChatScreen() {
               {EXAMPLE_QUESTIONS.map((q) => (
                 <Pressable
                   key={q}
-                  style={[styles.suggestionChip, { borderColor, backgroundColor: messageBotBg }]}
+                  style={[
+                    styles.suggestionChip,
+                    { borderColor, backgroundColor: messageBotBg },
+                  ]}
                   onPress={() => setInputText(q)}
                 >
-                  <ThemedText style={[styles.suggestionText, { color: textColor }]}>{q}</ThemedText>
+                  <ThemedText style={[styles.suggestionText, { color: textColor }]}>
+                    {q}
+                  </ThemedText>
                 </Pressable>
               ))}
             </View>
@@ -281,19 +436,26 @@ export default function ChatScreen() {
         }
       />
 
+      {/* 输入栏 */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-        style={[styles.inputContainer, { backgroundColor: inputBg, borderTopColor: borderColor }]}
+        style={[
+          styles.inputContainer,
+          { backgroundColor: inputBg, borderTopColor: borderColor },
+        ]}
       >
         <TextInput
           style={[styles.input, { color: textColor, backgroundColor: pageBg }]}
           value={inputText}
           onChangeText={setInputText}
           placeholder="输入问题..."
-          placeholderTextColor={borderColor}
+          placeholderTextColor={subTextColor}
           multiline
           maxLength={500}
+          returnKeyType="send"
+          blurOnSubmit={false}
+          onSubmitEditing={handleSend}
         />
         <Button
           size="sm"
@@ -317,8 +479,10 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    gap: 16,
+    gap: 12,
   },
+
+  // 空状态
   emptyWrap: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -333,7 +497,7 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     fontSize: 13,
-    opacity: 0.7,
+    opacity: 0.8,
     textAlign: 'center',
     marginTop: 4,
   },
@@ -352,6 +516,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+
+  // 消息行
   messageRow: {
     flexDirection: 'row',
     width: '100%',
@@ -360,15 +526,41 @@ const styles = StyleSheet.create({
   messageRowBot: { justifyContent: 'flex-start' },
   messageColumn: {
     maxWidth: '85%',
-    gap: 6,
+    gap: 4,
   },
   messageBubble: {
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 14,
   },
+
+  // 打字动效
+  typingBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    alignSelf: 'flex-start',
+  },
+  typingDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#999',
+  },
+
+  // 时间戳
+  timestamp: {
+    fontSize: 10,
+    marginTop: 2,
+    opacity: 0.7,
+  },
+
+  // 引用溯源
   sourcesContainer: {
     gap: 4,
-    paddingLeft: 4,
+    paddingLeft: 2,
+    marginTop: 2,
   },
   sourcesLabel: {
     fontSize: 11,
@@ -378,7 +570,7 @@ const styles = StyleSheet.create({
   sourceCard: {
     borderRadius: 8,
     padding: 8,
-    gap: 3,
+    gap: 4,
   },
   sourceHeader: {
     flexDirection: 'row',
@@ -408,17 +600,20 @@ const styles = StyleSheet.create({
   },
   sourceMetaText: {
     fontSize: 11,
-    opacity: 0.7,
+    opacity: 0.75,
   },
   sourceExcerpt: {
     fontSize: 11,
     opacity: 0.6,
     lineHeight: 16,
+    marginTop: 2,
   },
+
+  // 输入区
   inputContainer: {
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 10,
@@ -441,6 +636,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  // 顶部栏
   topBar: {
     paddingHorizontal: 14,
     paddingVertical: 7,
