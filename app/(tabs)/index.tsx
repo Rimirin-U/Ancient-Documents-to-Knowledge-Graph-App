@@ -7,18 +7,19 @@ import * as ImagePicker from 'expo-image-picker';
 import { StyleSheet } from "react-native";
 import { uploadImage as uploadImageService } from "@/services/analysis";
 
+type CompressResult = { uri: string; compressed: boolean };
+
 /** 上传前压缩图片，目标宽度 1920px、JPEG 质量 0.82，减少上传流量 */
-async function compressImage(uri: string): Promise<string> {
+async function compressImage(uri: string): Promise<CompressResult> {
   try {
     const result = await manipulateAsync(
       uri,
       [{ resize: { width: 1920 } }],
       { compress: 0.82, format: SaveFormat.JPEG }
     );
-    return result.uri;
+    return { uri: result.uri, compressed: true };
   } catch {
-    // 压缩失败时使用原图，不影响上传流程
-    return uri;
+    return { uri, compressed: false };
   }
 }
 
@@ -27,9 +28,9 @@ export default function Index() {
 
   const uploadImage = async (uri: string, fileName: string) => {
     try {
-      const compressedUri = await compressImage(uri);
-      const jpgFileName = fileName.replace(/\.[^.]+$/, '') + '.jpg';
-      await uploadImageService(compressedUri, jpgFileName);
+      const { uri: compressedUri, compressed } = await compressImage(uri);
+      const uploadFileName = compressed ? fileName.replace(/\.[^.]+$/, '') + '.jpg' : fileName;
+      await uploadImageService(compressedUri, uploadFileName);
       toast.success('上传成功', '上传成功，后台分析中');
     } catch (error) {
       console.error(error);

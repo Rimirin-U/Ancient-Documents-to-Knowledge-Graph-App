@@ -1,7 +1,7 @@
 // services/analysis.ts
 // 图像分析相关 API 调用
 import { Platform } from 'react-native';
-import { API_BASE_URL, authHeaders } from './api';
+import { apiFetch, API_BASE_URL, authHeaders } from './api';
 
 type ApiErrorShape = {
   detail?: string;
@@ -121,7 +121,7 @@ export async function uploadImage(uri: string, fileName: string): Promise<Upload
   }
 
   const headers = await authHeaders();
-  const response = await fetch(`${API_BASE_URL}/api/v1/images/upload`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/images/upload`, {
     method: 'POST',
     headers,
     body: formData,
