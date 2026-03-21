@@ -15,7 +15,8 @@ import { getStorageItem, setStorageItem, removeStorageItem } from '@/services/st
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -188,6 +189,13 @@ export default function ChatScreen() {
     });
     getKbStatus().then(setKbCount);
   }, []);
+
+  // 每次进入问答页刷新文书数量（上传/OCR 完成后从其他 Tab 切回可见最新）
+  useFocusEffect(
+    useCallback(() => {
+      getKbStatus().then(setKbCount);
+    }, []),
+  );
 
   // 持久化消息（最多保存 30 条）
   useEffect(() => {
@@ -439,7 +447,7 @@ export default function ChatScreen() {
               {kbCount != null && kbCount > 0
                 ? `当前知识库包含 ${kbCount} 份文书，可以这样提问：`
                 : kbCount === 0
-                  ? '知识库暂无文书，请点击右上角 ↻ 重建索引后再提问'
+                  ? '暂无已完成 OCR 的文书。请先在首页上传并完成识别后再提问；右上角 ↻ 用于重建向量索引（可选）。'
                   : '上传并完成 OCR 识别后，可以这样提问：'}
             </ThemedText>
             <View style={styles.suggestionsWrap}>
