@@ -108,10 +108,14 @@ export type UploadImageResponse = {
 export async function uploadImage(uri: string, fileName: string): Promise<UploadImageResponse> {
   const formData = new FormData();
 
-  if (Platform.OS === 'web' && uri.startsWith('blob:')) {
+  if (Platform.OS === 'web') {
     const res = await fetch(uri);
+    if (!res.ok) {
+      throw new Error('无法读取本地图片，请重新选择');
+    }
     const blob = await res.blob();
-    formData.append('image', new File([blob], fileName, { type: blob.type }));
+    const type = blob.type && blob.type.length > 0 ? blob.type : getMimeType(fileName);
+    formData.append('image', new File([blob], fileName, { type }));
   } else {
     formData.append('image', {
       uri,
@@ -121,11 +125,22 @@ export async function uploadImage(uri: string, fileName: string): Promise<Upload
   }
 
   const headers = await authHeaders();
-  const response = await apiFetch(`${API_BASE_URL}/api/v1/images/upload`, {
-    method: 'POST',
-    headers,
-    body: formData,
-  });
+  let response: Response;
+  try {
+    response = await apiFetch(`${API_BASE_URL}/api/v1/images/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === 'Network request failed' || msg.includes('Network request failed')) {
+      throw new Error(
+        `无法连接 ${API_BASE_URL}。请检查网络与后端服务；iOS 访问 HTTP 接口需使用 prebuild 后的开发包（Expo Go 不读取本项目的 ATS 配置）。`,
+      );
+    }
+    throw e;
+  }
 
   let result: any;
   try {

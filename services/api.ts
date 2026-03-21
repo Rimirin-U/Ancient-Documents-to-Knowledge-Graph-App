@@ -68,6 +68,11 @@ export async function apiFetch(
   const headers = new Headers(init?.headers);
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
+  // multipart/form-data 必须由运行时自动附带 boundary；若保留 application/json 等 Content-Type 会导致上传失败，部分环境下表现为 Network request failed
+  if (init?.body instanceof FormData) {
+    headers.delete('Content-Type');
+  }
+
   const response = await fetch(input, { ...init, headers });
 
   if (response.status === 401 && retry) {
