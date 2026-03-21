@@ -105,7 +105,19 @@ export type UploadImageResponse = {
   pipeline_started: boolean;
 };
 
-export async function uploadImage(uri: string, fileName: string): Promise<UploadImageResponse> {
+const UPLOAD_NETWORK_RETRIES = 3;
+
+function isTransientNetworkError(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e);
+  return (
+    msg === 'Network request failed' ||
+    msg.includes('Network request failed') ||
+    msg.includes('Failed to fetch')
+  );
+}
+
+/** 每次上传请求都新建 FormData；重试时必须重建，否则部分环境下 body 只能发送一次。 */
+async function buildImageFormData(uri: string, fileName: string): Promise<FormData> {
   const formData = new FormData();
 
   if (Platform.OS === 'web') {
@@ -124,36 +136,55 @@ export async function uploadImage(uri: string, fileName: string): Promise<Upload
     } as any);
   }
 
-  const headers = await authHeaders();
-  let response: Response;
-  try {
-    response = await apiFetch(`${API_BASE_URL}/api/v1/images/upload`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    if (msg === 'Network request failed' || msg.includes('Network request failed')) {
-      throw new Error(
-        `无法连接 ${API_BASE_URL}。请检查网络与后端服务；iOS 访问 HTTP 接口需使用 prebuild 后的开发包（Expo Go 不读取本项目的 ATS 配置）。`,
-      );
+  return formData;
+}
+
+export async function uploadImage(uri: string, fileName: string): Promise<UploadImageResponse> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < UPLOAD_NETWORK_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, 350 * attempt));
     }
-    throw e;
+
+    const formData = await buildImageFormData(uri, fileName);
+    const headers = await authHeaders();
+
+    let response: Response;
+    try {
+      response = await apiFetch(`${API_BASE_URL}/api/v1/images/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+    } catch (e) {
+      lastError = e;
+      if (isTransientNetworkError(e) && attempt < UPLOAD_NETWORK_RETRIES - 1) {
+        continue;
+      }
+      if (isTransientNetworkError(e)) {
+        throw new Error(
+          `无法连接 ${API_BASE_URL}。请检查网络与后端服务；iOS 访问 HTTP 接口需使用 prebuild 后的开发包（Expo Go 不读取本项目的 ATS 配置）。`,
+        );
+      }
+      throw e;
+    }
+
+    let result: any;
+    try {
+      result = await response.json();
+    } catch {
+      throw new Error('上传失败，请稍后重试');
+    }
+
+    if (!response.ok || !result?.success) {
+      throw new Error(result?.message || result?.detail || '上传失败');
+    }
+
+    return result as UploadImageResponse;
   }
 
-  let result: any;
-  try {
-    result = await response.json();
-  } catch {
-    throw new Error('上传失败，请稍后重试');
-  }
-
-  if (!response.ok || !result?.success) {
-    throw new Error(result?.message || result?.detail || '上传失败');
-  }
-
-  return result as UploadImageResponse;
+  throw lastError instanceof Error ? lastError : new Error('上传失败，请稍后重试');
 }
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
