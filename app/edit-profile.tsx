@@ -63,7 +63,10 @@ export default function EditProfileScreen() {
     }
   }
 
-  const inputStyle = [styles.input, { borderColor: colors.icon, color: colors.text }];
+  const inputStyle = [
+    styles.input,
+    { backgroundColor: colors.card, borderColor: colors.border, color: colors.text },
+  ];
 
   if (loading) {
     return (
@@ -82,16 +85,17 @@ export default function EditProfileScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <ThemedText style={styles.fieldLabel}>用户名</ThemedText>
+          <ThemedText style={[styles.fieldLabel, { color: colors.mutedForeground }]}>用户名</ThemedText>
           <TextInput
             style={inputStyle}
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
             autoCorrect={false}
+            placeholderTextColor={colors.mutedForeground}
           />
 
-          <ThemedText style={styles.fieldLabel}>邮箱</ThemedText>
+          <ThemedText style={[styles.fieldLabel, { color: colors.mutedForeground }]}>邮箱</ThemedText>
           <TextInput
             style={inputStyle}
             value={email}
@@ -99,25 +103,22 @@ export default function EditProfileScreen() {
             autoCapitalize="none"
             keyboardType="email-address"
             autoCorrect={false}
+            placeholderTextColor={colors.mutedForeground}
           />
 
-          <ThemedText style={styles.fieldLabel}>新密码（不修改请留空）</ThemedText>
+          <ThemedText style={[styles.fieldLabel, { color: colors.mutedForeground }]}>
+            新密码（不修改请留空）
+          </ThemedText>
           <TextInput
             style={inputStyle}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
             placeholder="留空即不修改"
-            placeholderTextColor={colors.icon}
+            placeholderTextColor={colors.mutedForeground}
           />
 
-          <Button
-            style={[styles.button, styles.editButton]}
-            onPress={handleSave}
-            disabled={saving}
-            loading={saving}
-            textStyle={styles.editButtonText}
-          >
+          <Button style={styles.button} onPress={handleSave} disabled={saving} loading={saving}>
             保存修改
           </Button>
         </ScrollView>
@@ -148,25 +149,17 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 13,
-    opacity: 0.6,
+    fontWeight: '500',
     marginBottom: -6,
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
   },
   button: {
-    marginTop: 8,
-  },
-  editButton: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  editButtonText: {
-    color: '#111827',
+    marginTop: 12,
   },
 });

@@ -117,10 +117,12 @@ function SourceCard({
   source,
   cardBg,
   textColor,
+  badgeColor,
 }: {
   source: ChatSource;
   cardBg: string;
   textColor: string;
+  badgeColor: string;
 }) {
   const metaItems: { icon: string; label: string; value: string }[] = [];
   if (VALID(source.time))     metaItems.push({ icon: '📅', label: '时间', value: source.time });
@@ -133,7 +135,7 @@ function SourceCard({
   return (
     <View style={[styles.sourceCard, { backgroundColor: cardBg }]}>
       <View style={styles.sourceHeader}>
-        <View style={styles.sourceIndexBadge}>
+        <View style={[styles.sourceIndexBadge, { backgroundColor: badgeColor }]}>
           <ThemedText style={styles.sourceIndexText}>[{source.index}]</ThemedText>
         </View>
         <ThemedText style={[styles.sourceFilename, { color: textColor }]} numberOfLines={1}>
@@ -163,14 +165,15 @@ export default function ChatScreen() {
   const toast = useToast();
   const listRef = useRef<FlatList>(null);
 
-  const pageBg        = useColor('background', { light: '#eceef1', dark: '#121418' });
-  const messageUserBg = useColor('tint',       { light: '#0a7ea4', dark: '#0a7ea4' });
-  const messageBotBg  = useColor('background', { light: '#ffffff', dark: '#21262e' });
-  const sourceCardBg  = useColor('background', { light: '#f0f4f8', dark: '#2a3040' });
-  const inputBg       = useColor('background', { light: '#ffffff', dark: '#21262e' });
-  const borderColor   = useColor('icon',       { light: '#d7dae0', dark: '#3a414c' });
+  const pageBg = useColor('screen');
+  const messageUserBg = useColor('primary');
+  const messageUserFg = useColor('primaryForeground');
+  const messageBotBg = useColor('card');
+  const sourceCardBg = useColor('secondary');
+  const inputBg = useColor('card');
+  const borderColor = useColor('border');
   const textColor     = useColor('text',       {});
-  const subTextColor  = useColor('icon',       { light: '#9aa0aa', dark: '#6b7280' });
+  const subTextColor = useColor('mutedForeground');
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -393,7 +396,7 @@ export default function ChatScreen() {
                   >
                     <ThemedText
                       style={{
-                        color: item.role === 'user' ? '#ffffff' : textColor,
+                        color: item.role === 'user' ? messageUserFg : textColor,
                         lineHeight: 22,
                       }}
                     >
@@ -424,12 +427,13 @@ export default function ChatScreen() {
                   <ThemedText style={[styles.sourcesLabel, { color: subTextColor }]}>
                     参考文书：
                   </ThemedText>
-                  {item.sources.map((src) => (
+                  {item.sources.map((src: ChatSource) => (
                     <SourceCard
                       key={src.index}
                       source={src}
                       cardBg={sourceCardBg}
                       textColor={textColor}
+                      badgeColor={messageUserBg}
                     />
                   ))}
                 </View>
@@ -498,9 +502,9 @@ export default function ChatScreen() {
           style={styles.sendButton}
         >
           {loading ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={messageUserFg} />
           ) : (
-            <MaterialIcons name="send" size={20} color="#fff" />
+            <MaterialIcons name="send" size={20} color={messageUserFg} />
           )}
         </Button>
       </KeyboardAvoidingView>
@@ -612,7 +616,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   sourceIndexBadge: {
-    backgroundColor: '#0a7ea4',
     borderRadius: 4,
     paddingHorizontal: 5,
     paddingVertical: 1,

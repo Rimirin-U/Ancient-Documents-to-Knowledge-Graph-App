@@ -30,7 +30,8 @@ function RecordCardBase({
   const muted = useColor('icon', { light: '#5f6368', dark: '#a9b1ba' });
   const outline = useColor('icon', { light: '#d9dce1', dark: '#383d44' });
   const checkboxBg = useColor('background', { light: '#ffffff', dark: '#0f1115' });
-  const thumbnailBg = useColor('background', { light: '#eceef1', dark: '#161a20' });
+  const thumbnailBg = useColor('screen');
+  const checkTint = useColor('tint');
 
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -69,7 +70,7 @@ function RecordCardBase({
           >
             <View style={[styles.checkbox, { borderColor: outline, backgroundColor: checkboxBg }]}>
               {selected ? (
-                <MaterialIcons name="check" size={16} color="#1f6feb" />
+                <MaterialIcons name="check" size={16} color={checkTint} />
               ) : null}
             </View>
           </Pressable>

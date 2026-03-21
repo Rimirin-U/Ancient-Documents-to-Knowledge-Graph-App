@@ -1,153 +1,105 @@
+/** 浅色：清爽纸感背景 + 青绿主色，适合长时间阅读与操作 */
 const lightColors = {
-  // Base colors
-  background: '#FFFFFF',
-  foreground: '#000000',
+  background: '#F8FAFC',
+  foreground: '#0F172A',
 
-  // Card colors
-  card: '#F2F2F7',
-  cardForeground: '#000000',
+  card: '#FFFFFF',
+  cardForeground: '#0F172A',
 
-  // Popover colors
-  popover: '#F2F2F7',
-  popoverForeground: '#000000',
+  popover: '#FFFFFF',
+  popoverForeground: '#0F172A',
 
-  // Primary colors
-  primary: '#18181b',
+  /** 主按钮、强调、选中 Tab */
+  primary: '#0D9488',
   primaryForeground: '#FFFFFF',
 
-  // Secondary colors
-  secondary: '#F2F2F7',
-  secondaryForeground: '#18181b',
+  secondary: '#E0F2F1',
+  secondaryForeground: '#115E59',
 
-  // Muted colors
-  muted: '#78788033',
-  mutedForeground: '#71717a',
+  muted: 'rgba(100, 116, 139, 0.12)',
+  mutedForeground: '#64748B',
 
-  // Accent colors
-  accent: '#F2F2F7',
-  accentForeground: '#18181b',
+  accent: '#F0FDFA',
+  accentForeground: '#134E4A',
 
-  // Destructive colors
-  destructive: '#ef4444',
+  destructive: '#DC2626',
   destructiveForeground: '#FFFFFF',
 
-  // Border and input
-  border: '#C6C6C8',
-  input: '#e4e4e7',
-  ring: '#a1a1aa',
+  border: '#E2E8F0',
+  input: '#E2E8F0',
+  ring: '#0D9488',
 
-  // Text colors
-  text: '#000000',
-  textMuted: '#71717a',
+  text: '#0F172A',
+  textMuted: '#64748B',
 
-  // Legacy support for existing components
-  tint: '#18181b',
-  icon: '#71717a',
-  tabIconDefault: '#71717a',
-  tabIconSelected: '#18181b',
+  tint: '#0D9488',
+  icon: '#64748B',
+  tabIconDefault: '#94A3B8',
+  tabIconSelected: '#0D9488',
 
-  // Default buttons, links, Send button, selected tabs
-  blue: '#007AFF',
+  blue: '#0D9488',
+  green: '#059669',
+  red: '#DC2626',
+  orange: '#EA580C',
+  yellow: '#CA8A04',
+  pink: '#DB2777',
+  purple: '#7C3AED',
+  teal: '#14B8A6',
+  indigo: '#4F46E5',
 
-  // Success states, FaceTime buttons, completed tasks
-  green: '#34C759',
-
-  // Delete buttons, error states, critical alerts
-  red: '#FF3B30',
-
-  // VoiceOver highlights, warning states
-  orange: '#FF9500',
-
-  // Notes app accent, Reminders highlights
-  yellow: '#FFCC00',
-
-  // Pink accent color for various UI elements
-  pink: '#FF2D92',
-
-  // Purple accent for creative apps and features
-  purple: '#AF52DE',
-
-  // Teal accent for communication features
-  teal: '#5AC8FA',
-
-  // Indigo accent for system features
-  indigo: '#5856D6',
+  /** 列表页等二级画布，略深于 background 以衬托白卡片 */
+  screen: '#EDF2F7',
 };
 
+/** 深色：低对比护眼的 slate 底 + 亮青绿强调 */
 const darkColors = {
-  // Base colors
-  background: '#000000',
-  foreground: '#FFFFFF',
+  background: '#0B1220',
+  foreground: '#F1F5F9',
 
-  // Card colors
-  card: '#1C1C1E',
-  cardForeground: '#FFFFFF',
+  card: '#1E293B',
+  cardForeground: '#F1F5F9',
 
-  // Popover colors
-  popover: '#18181b',
-  popoverForeground: '#FFFFFF',
+  popover: '#1E293B',
+  popoverForeground: '#F1F5F9',
 
-  // Primary colors
-  primary: '#e4e4e7',
-  primaryForeground: '#18181b',
+  primary: '#2DD4BF',
+  primaryForeground: '#042F2E',
 
-  // Secondary colors
-  secondary: '#1C1C1E',
-  secondaryForeground: '#FFFFFF',
+  secondary: '#134E4A',
+  secondaryForeground: '#CCFBF1',
 
-  // Muted colors
-  muted: '#78788033',
-  mutedForeground: '#a1a1aa',
+  muted: 'rgba(148, 163, 184, 0.15)',
+  mutedForeground: '#94A3B8',
 
-  // Accent colors
-  accent: '#1C1C1E',
-  accentForeground: '#FFFFFF',
+  accent: '#134E4A',
+  accentForeground: '#CCFBF1',
 
-  // Destructive colors
-  destructive: '#dc2626',
+  destructive: '#EF4444',
   destructiveForeground: '#FFFFFF',
 
-  // Border and input - using alpha values for better blending
-  border: '#38383A',
-  input: 'rgba(255, 255, 255, 0.15)',
-  ring: '#71717a',
+  border: '#334155',
+  input: 'rgba(255, 255, 255, 0.12)',
+  ring: '#2DD4BF',
 
-  // Text colors
-  text: '#FFFFFF',
-  textMuted: '#a1a1aa',
+  text: '#F1F5F9',
+  textMuted: '#94A3B8',
 
-  // Legacy support for existing components
-  tint: '#FFFFFF',
-  icon: '#a1a1aa',
-  tabIconDefault: '#a1a1aa',
-  tabIconSelected: '#FFFFFF',
+  tint: '#2DD4BF',
+  icon: '#94A3B8',
+  tabIconDefault: '#64748B',
+  tabIconSelected: '#2DD4BF',
 
-  // Default buttons, links, Send button, selected tabs
-  blue: '#0A84FF',
+  blue: '#2DD4BF',
+  green: '#34D399',
+  red: '#F87171',
+  orange: '#FB923C',
+  yellow: '#FACC15',
+  pink: '#F472B6',
+  purple: '#C084FC',
+  teal: '#5EEAD4',
+  indigo: '#A5B4FC',
 
-  // Success states, FaceTime buttons, completed tasks
-  green: '#30D158',
-
-  // Delete buttons, error states, critical alerts
-  red: '#FF453A',
-
-  // VoiceOver highlights, warning states
-  orange: '#FF9F0A',
-
-  // Notes app accent, Reminders highlights
-  yellow: '#FFD60A',
-
-  // Pink accent color for various UI elements
-  pink: '#FF375F',
-
-  // Purple accent for creative apps and features
-  purple: '#BF5AF2',
-
-  // Teal accent for communication features
-  teal: '#64D2FF',
-
-  // Indigo accent for system features
-  indigo: '#5E5CE6',
+  screen: '#0F172A',
 };
 
 export const Colors = {
@@ -155,8 +107,6 @@ export const Colors = {
   dark: darkColors,
 };
 
-// Export individual color schemes for easier access
 export { darkColors, lightColors };
 
-// Utility type for color keys
 export type ColorKeys = keyof typeof lightColors;

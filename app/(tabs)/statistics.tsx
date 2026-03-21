@@ -140,17 +140,16 @@ function StatCard({
 // ── 主页面 ────────────────────────────────────────────────────
 
 export default function StatisticsScreen() {
-  const pageBg = useColor('background', { light: '#f6f7f9', dark: '#1d2229' });
-  const cardBg = useColor('background', { light: '#ffffff', dark: '#252c36' });
-  const sectionBg = useColor('background', { light: '#ffffff', dark: '#252c36' });
-  const borderColor = useColor('icon', { light: '#e5e7eb', dark: '#2d3748' });
-  const textColor = useColor('text', {});
-
-  const BLUE = '#0a7ea4';
-  const GREEN = '#10b981';
-  const AMBER = '#f59e0b';
-  const PURPLE = '#7c3aed';
-  const RED = '#dc2626';
+  const pageBg = useColor('screen');
+  const cardBg = useColor('card');
+  const sectionBg = useColor('card');
+  const borderColor = useColor('border');
+  const textColor = useColor('text');
+  const BLUE = useColor('blue');
+  const GREEN = useColor('green');
+  const AMBER = useColor('orange');
+  const PURPLE = useColor('purple');
+  const RED = useColor('red');
 
   const [data, setData] = useState<StatisticsData | null>(null);
   const [loading, setLoading] = useState(true);

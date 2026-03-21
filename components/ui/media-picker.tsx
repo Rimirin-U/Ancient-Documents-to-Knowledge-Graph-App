@@ -359,6 +359,7 @@ export const MediaPicker = forwardRef<RNView, MediaPickerProps>(
             variant={variant}
             size={size}
             icon={icon}
+            style={{ alignSelf: 'stretch' }}
           >
             {buttonText ||
               `Select ${

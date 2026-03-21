@@ -101,7 +101,7 @@ export default function ProfileScreen() {
         }
       >
         {userInfo && (
-          <Card style={styles.card}>
+          <Card style={[styles.card, { borderColor: colors.border }]}>
             <InfoRow label="用户名" value={userInfo.username} colors={colors} />
             <InfoRow label="邮箱" value={userInfo.email} colors={colors} />
             <InfoRow
@@ -114,19 +114,14 @@ export default function ProfileScreen() {
 
         <View style={styles.actions}>
           <Button
-            style={[styles.button, styles.editButton]}
+            style={styles.button}
             onPress={() => router.push('/edit-profile' as any)}
-            variant="default"
-            textStyle={styles.editButtonText}
+            variant="outline"
           >
             修改个人信息
           </Button>
 
-          <Button
-            style={[styles.button, styles.logoutButton]}
-            onPress={handleLogout}
-            variant="destructive"
-          >
+          <Button style={styles.button} onPress={handleLogout} variant="destructive">
             退出登录
           </Button>
         </View>
@@ -178,11 +173,10 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   card: {
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(128,128,128,0.2)',
+    borderRadius: 16,
+    padding: 18,
+    gap: 14,
+    borderWidth: StyleSheet.hairlineWidth * 2,
   },
   infoRow: {
     flexDirection: 'row',
@@ -205,18 +199,6 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
-  },
-  editButton: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  editButtonText: {
-    color: '#111827',
-  },
-  logoutButton: {
-    backgroundColor: '#e05252',
-    marginTop: 8,
   },
 });
 

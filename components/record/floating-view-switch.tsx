@@ -106,9 +106,14 @@ function SwitchRow({
   active: boolean;
   onPress: () => void;
 }) {
+  const activeTint = useColor('tint');
   return (
     <Pressable style={styles.optionRow} onPress={onPress}>
-      <ThemedText style={[styles.optionText, active ? styles.activeText : null]}>
+      <ThemedText
+        style={[
+          styles.optionText,
+          active ? { color: activeTint, fontWeight: '600' } : null,
+        ]}>
         {label}
       </ThemedText>
     </Pressable>
@@ -138,10 +143,6 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 14,
     lineHeight: 18,
-  },
-  activeText: {
-    color: '#0a7ea4',
-    fontWeight: '600',
   },
   trigger: {
     flexDirection: 'row',

@@ -1,5 +1,4 @@
 // app/register.tsx
-// 注册页
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
@@ -9,13 +8,17 @@ import { Colors } from '@/theme/colors';
 import { useAuth } from '@/context/auth-context';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useRouter } from 'expo-router';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   TextInput,
+  View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function RegisterScreen() {
   const colorScheme = useColorScheme();
@@ -23,6 +26,7 @@ export default function RegisterScreen() {
   const { register } = useAuth();
   const router = useRouter();
   const toast = useToast();
+  const insets = useSafeAreaInsets();
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -51,65 +55,80 @@ export default function RegisterScreen() {
     }
   }
 
+  const inputSurface = { backgroundColor: colors.card, borderColor: colors.border };
+
   return (
     <ThemedView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.inner}
-      >
-        <ThemedText type="title" style={styles.title}>注册</ThemedText>
+        style={styles.flex}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingTop: Math.max(insets.top, 16), paddingBottom: insets.bottom + 24 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <View style={[styles.brand, { backgroundColor: colors.secondary }]}>
+            <MaterialIcons name="person-add" size={36} color={colors.primary} />
+          </View>
+          <ThemedText type="title" style={styles.title}>
+            创建账号
+          </ThemedText>
+          <ThemedText style={[styles.subtitle, { color: colors.mutedForeground }]}>
+            注册后即可同步文书与识别记录
+          </ThemedText>
 
-        <TextInput
-          style={[styles.input, { borderColor: colors.icon, color: colors.text }]}
-          placeholder="用户名"
-          placeholderTextColor={colors.icon}
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
+          <View style={styles.form}>
+            <TextInput
+              style={[styles.input, inputSurface, { color: colors.text }]}
+              placeholder="用户名"
+              placeholderTextColor={colors.mutedForeground}
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
 
-        <TextInput
-          style={[styles.input, { borderColor: colors.icon, color: colors.text }]}
-          placeholder="邮箱"
-          placeholderTextColor={colors.icon}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoCorrect={false}
-        />
+            <TextInput
+              style={[styles.input, inputSurface, { color: colors.text }]}
+              placeholder="邮箱"
+              placeholderTextColor={colors.mutedForeground}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoCorrect={false}
+            />
 
-        <TextInput
-          style={[styles.input, { borderColor: colors.icon, color: colors.text }]}
-          placeholder="密码"
-          placeholderTextColor={colors.icon}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+            <TextInput
+              style={[styles.input, inputSurface, { color: colors.text }]}
+              placeholder="密码"
+              placeholderTextColor={colors.mutedForeground}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
 
-        <TextInput
-          style={[styles.input, { borderColor: colors.icon, color: colors.text }]}
-          placeholder="确认密码"
-          placeholderTextColor={colors.icon}
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-        />
+            <TextInput
+              style={[styles.input, inputSurface, { color: colors.text }]}
+              placeholder="确认密码"
+              placeholderTextColor={colors.mutedForeground}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+            />
 
-        <Button
-          style={[styles.button, { backgroundColor: colors.tint }]}
-          onPress={handleRegister}
-          disabled={loading}
-          loading={loading}
-        >
-          注册
-        </Button>
+            <Button style={styles.button} onPress={handleRegister} disabled={loading} loading={loading}>
+              注册
+            </Button>
 
-        <Button variant="link" onPress={() => router.back()} style={styles.link}>
-          已有账号？去登录
-        </Button>
+            <Button variant="link" onPress={() => router.back()} style={styles.link}>
+              已有账号？去登录
+            </Button>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
 
       <AlertDialog
@@ -133,25 +152,46 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  inner: {
+  flex: {
     flex: 1,
+  },
+  scroll: {
+    paddingHorizontal: 28,
+    gap: 12,
+  },
+  brand: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    alignSelf: 'center',
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 16,
+    marginBottom: 4,
   },
   title: {
     textAlign: 'center',
+    fontSize: 26,
+    lineHeight: 32,
+  },
+  subtitle: {
+    textAlign: 'center',
+    fontSize: 14,
+    lineHeight: 21,
     marginBottom: 8,
+  },
+  form: {
+    gap: 12,
+    marginTop: 12,
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 16,
   },
   button: {
-    marginTop: 4,
+    marginTop: 8,
   },
   link: {
     marginTop: 4,

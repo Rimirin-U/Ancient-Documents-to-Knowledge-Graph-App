@@ -41,7 +41,7 @@ export default function RecordScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
 
-  const pageBg = useColor('background', { light: '#eceef1', dark: '#121418' });
+  const pageBg = useColor('screen');
   const textColor = useColor('text', {});
   const subtleColor = useColor('icon', { light: '#616976', dark: '#a1a9b5' });
   const menuBg = useColor('background', { light: '#f4f5f7', dark: '#21262e' });
