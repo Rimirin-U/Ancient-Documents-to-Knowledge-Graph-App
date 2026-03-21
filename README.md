@@ -17,7 +17,13 @@ npx expo start
 
 ## API 基础地址
 
-后端根 URL 定义在 **`services/config.ts`** 中的常量 **`API_BASE_URL`**（例如指向 `http://<服务器IP>:3000`）。联调本机后端时请改为 `http://localhost:3000` 或本机局域网 IP，与后端 `uvicorn` 端口一致。
+后端根地址由 **`services/config.ts`** 的 **`API_BASE_URL`** 决定：
+
+- **推荐**：在项目根目录复制 `.env.example` 为 `.env`，设置 `EXPO_PUBLIC_API_BASE_URL=http://公网IP:端口`，保存后**重启** `npx expo start`（环境变量在启动时注入）。
+- **或直接改代码**：编辑 `services/config.ts` 里的 `fallback` 字符串为 `http://公网IP:端口`。
+- 仅局域网联调本机后端时，可设为 `http://localhost:3000` 或 `http://局域网IP:3000`，须与 `uvicorn` 端口一致。
+
+手机用移动网络访问时，后端须监听 `0.0.0.0` 且云安全组/防火墙放行对应 TCP 端口；详见仓库根目录 `remote.md`。
 
 通用请求与 Token 刷新逻辑在 **`services/api.ts`**（`getToken`、`apiFetch` 等）。
 
