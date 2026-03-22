@@ -120,4 +120,4 @@ const option = { /* ... */ };
 
 ## 应用配置
 
-Expo 配置见根目录 **`app.json`**（如 `scheme`、`plugins` 等）。
+Expo 配置见根目录 **`app.config.js`**（如 `scheme`、`plugins`、与 Expo Go 对齐的 `extra.apiBaseUrl` 等）。
