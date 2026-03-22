@@ -18,8 +18,9 @@ import {
   RecordImageItem,
 } from '@/services/record';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useNavigation, useRouter } from 'expo-router';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -111,13 +112,19 @@ export default function RecordScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    if (currentView === 'image') {
-      fetchImageRecords();
-      return;
-    }
-    fetchCrossDocRecords();
-  }, [currentView, fetchImageRecords, fetchCrossDocRecords]);
+  const loadedViewsRef = useRef(new Set<string>());
+
+  useFocusEffect(
+    useCallback(() => {
+      const isRefresh = loadedViewsRef.current.has(currentView);
+      loadedViewsRef.current.add(currentView);
+      if (currentView === 'image') {
+        fetchImageRecords(isRefresh);
+      } else {
+        fetchCrossDocRecords(isRefresh);
+      }
+    }, [currentView, fetchImageRecords, fetchCrossDocRecords]),
+  );
 
   const openHeaderMenu = useCallback(() => {
     if (headerMenuVisible) return;
