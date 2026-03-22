@@ -387,42 +387,76 @@ export default function ImageDetailScreen() {
     }
   }
 
-  function handleTriggerStructured() {
+  async function handleTriggerStructured() {
     if (!selectedOcr?.id) {
       toast.warning('提示', '暂无OCR结果，请先执行识别');
       return;
     }
 
-    doAction(() => triggerStructuredAnalysis(selectedOcr.id), '结构化任务已提交', async () => {
-      // Celery Worker 创建 PROCESSING 记录需要短暂时间，最多重试 5 次（每次等 400ms）
-      let nextStructuredIds: number[] = [];
-      for (let attempt = 0; attempt < 5; attempt++) {
-        nextStructuredIds = await getStructuredIdsByOcr(selectedOcr.id);
-        if (nextStructuredIds.length > (structuredIds.length)) break;
-        await new Promise((r) => setTimeout(r, 400));
+    setActionLoading(true);
+    try {
+      await triggerStructuredAnalysis(selectedOcr.id);
+      toast.success('提示', '结构化任务已提交');
+
+      if (structuredIds.length === 0) {
+        let nextStructuredIds: number[] = [];
+        for (let attempt = 0; attempt < 5; attempt++) {
+          await new Promise((r) => setTimeout(r, 400));
+          nextStructuredIds = await getStructuredIdsByOcr(selectedOcr.id);
+          if (nextStructuredIds.length > 0) break;
+        }
+        setStructuredIds(nextStructuredIds);
+        setSelectedStructuredIndex(nextStructuredIds.length ? nextStructuredIds.length - 1 : 0);
+      } else {
+        const currentId = structuredIds[selectedStructuredIndex];
+        if (currentId) {
+          await new Promise((r) => setTimeout(r, 500));
+          const updated = await getStructuredDetail(currentId);
+          setSelectedStructured(updated);
+        }
       }
-      setStructuredIds(nextStructuredIds);
-      setSelectedStructuredIndex(nextStructuredIds.length ? nextStructuredIds.length - 1 : 0);
-    });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '操作失败';
+      toast.error('失败', message);
+    } finally {
+      setActionLoading(false);
+    }
   }
 
-  function handleTriggerRelationGraph() {
+  async function handleTriggerRelationGraph() {
     if (!selectedStructured?.id) {
       toast.warning('提示', '暂无结构化结果，请先执行结构化分析');
       return;
     }
 
-    doAction(() => triggerRelationGraphAnalysis(selectedStructured.id), '关系图任务已提交', async () => {
-      // 同上，等待 Celery Worker 写入 PROCESSING 记录
-      let nextRelationIds: number[] = [];
-      for (let attempt = 0; attempt < 5; attempt++) {
-        nextRelationIds = await getRelationGraphIdsByStructured(selectedStructured.id);
-        if (nextRelationIds.length > (relationGraphIds.length)) break;
-        await new Promise((r) => setTimeout(r, 400));
+    setActionLoading(true);
+    try {
+      await triggerRelationGraphAnalysis(selectedStructured.id);
+      toast.success('提示', '关系图任务已提交');
+
+      if (relationGraphIds.length === 0) {
+        let nextRelationIds: number[] = [];
+        for (let attempt = 0; attempt < 5; attempt++) {
+          await new Promise((r) => setTimeout(r, 400));
+          nextRelationIds = await getRelationGraphIdsByStructured(selectedStructured.id);
+          if (nextRelationIds.length > 0) break;
+        }
+        setRelationGraphIds(nextRelationIds);
+        setSelectedRelationIndex(nextRelationIds.length ? nextRelationIds.length - 1 : 0);
+      } else {
+        const currentId = relationGraphIds[selectedRelationIndex];
+        if (currentId) {
+          await new Promise((r) => setTimeout(r, 500));
+          const updated = await getRelationGraphDetail(currentId);
+          setSelectedRelation(updated);
+        }
       }
-      setRelationGraphIds(nextRelationIds);
-      setSelectedRelationIndex(nextRelationIds.length ? nextRelationIds.length - 1 : 0);
-    });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '操作失败';
+      toast.error('失败', message);
+    } finally {
+      setActionLoading(false);
+    }
   }
 
   async function copyText(value: string, emptyHint: string) {
