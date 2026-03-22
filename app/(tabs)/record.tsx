@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/toast';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColor } from '@/hooks/useColor';
+import { API_BASE_URL } from '@/services/api';
 import {
   createCrossDocTaskFromImages,
   CrossDocRecordItem,
@@ -318,7 +319,17 @@ export default function RecordScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
-            <ThemedText style={{ color: subtleColor }}>暂无记录</ThemedText>
+            <ThemedText style={{ color: subtleColor, textAlign: 'center' }}>
+              暂无单文书图片记录
+            </ThemedText>
+            <ThemedText style={[styles.emptyHint, { color: subtleColor }]}>
+              请确认右下角浮层为「图片」（不是「跨文档」）；上传后可点右上角刷新或切换 Tab 后再进入本页。
+            </ThemedText>
+            {__DEV__ ? (
+              <ThemedText style={[styles.emptyHint, { color: subtleColor, fontSize: 11 }]}>
+                调试：API {API_BASE_URL}
+              </ThemedText>
+            ) : null}
           </View>
         }
         refreshControl={
@@ -372,7 +383,12 @@ export default function RecordScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
-            <ThemedText style={{ color: subtleColor }}>暂无跨文档记录</ThemedText>
+            <ThemedText style={{ color: subtleColor, textAlign: 'center' }}>
+              暂无跨文档分析任务
+            </ThemedText>
+            <ThemedText style={[styles.emptyHint, { color: subtleColor }]}>
+              单文书上传记录在「图片」视图。请点击右下角切换到「图片」。
+            </ThemedText>
           </View>
         }
         removeClippedSubviews
@@ -495,6 +511,13 @@ const styles = StyleSheet.create({
   emptyWrap: {
     marginTop: 36,
     alignItems: 'center',
+    paddingHorizontal: 24,
+    gap: 10,
+  },
+  emptyHint: {
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: 'center',
   },
   menuOverlay: {
     flex: 1,

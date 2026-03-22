@@ -98,7 +98,37 @@ export async function getImageRecordList(params?: {
     throw new Error(listResult.detail || '获取图片记录失败');
   }
 
-  const imageItems = (listResult.data.items ?? []) as ImageItem[];
+  let imageItems = (listResult.data.items ?? []) as ImageItem[];
+
+  // 兼容旧版后端：只返回 ids、没有 items 时，按 id 逐个拉取 /images/{id}/info
+  if (imageItems.length === 0 && (listResult.data.ids?.length ?? 0) > 0) {
+    const ids = listResult.data.ids;
+    const hydrated = await Promise.all(
+      ids.map(async (id) => {
+        try {
+          const info = await getImageInfo(id);
+          return {
+            id: info.id,
+            filename: info.filename,
+            upload_time: info.upload_time,
+            title: info.title,
+          } satisfies ImageItem;
+        } catch {
+          return null;
+        }
+      }),
+    );
+    imageItems = hydrated.filter((x): x is ImageItem => x != null);
+  }
+
+  if (__DEV__) {
+    console.log('[getImageRecordList]', {
+      api: API_BASE_URL,
+      total: listResult.data.total,
+      idCount: listResult.data.ids?.length ?? 0,
+      itemCount: imageItems.length,
+    });
+  }
 
   return imageItems.map((item) => ({
     id: item.id,
