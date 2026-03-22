@@ -6,10 +6,13 @@ import { getChartHtml } from "./echartsHtml";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const E_HEIGHT = 480;
 
+/** 与 echartsHtml 内 nodeClick 载荷、Web 端 echarts.tsx 保持一致 */
 export type NodeClickData = {
   name: string;
   category: number | null;
-  properties: Record<string, unknown> | null;
+  symbolSize: number | null;
+  properties: unknown;
+  seriesType: string | null;
 };
 
 export function Chart({
@@ -60,9 +63,17 @@ export function Chart({
               onGesture(data.active);
             } else if (data.type === 'nodeClick' && onNodeClick) {
               onNodeClick({
-                name: data.name,
-                category: data.category,
-                properties: data.properties,
+                name: String(data.name ?? ''),
+                category:
+                  data.category === undefined || data.category === null
+                    ? null
+                    : Number(data.category),
+                symbolSize:
+                  data.symbolSize === undefined || data.symbolSize === null
+                    ? null
+                    : Number(data.symbolSize),
+                properties: data.properties ?? null,
+                seriesType: data.seriesType != null ? String(data.seriesType) : null,
               });
             }
           } catch {

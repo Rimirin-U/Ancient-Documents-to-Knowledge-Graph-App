@@ -340,13 +340,51 @@ export default function ImageDetailScreen() {
     }
   }
 
-  function handleTriggerOcr() {
+  /**
+   * 识别结果区「刷新」：
+   * - 已有 OCR 记录：只从服务端重新拉取列表与详情（不重复排队任务）。
+   * - 尚无记录：先 POST 触发识别，再轮询等待 Worker 写入 OcrResult（避免刚提交就立刻查仍为空）。
+   */
+  async function handleOcrRefresh() {
     if (!Number.isFinite(imageId)) return;
-    doAction(() => triggerImageOcr(imageId), 'OCR任务已提交', async () => {
-      const nextOcrIds = await getOcrIdsByImage(imageId);
-      setOcrIds(nextOcrIds);
-      setSelectedOcrIndex(nextOcrIds.length ? nextOcrIds.length - 1 : 0);
-    });
+    setActionLoading(true);
+    try {
+      let ids = await getOcrIdsByImage(imageId);
+      let justTriggered = false;
+
+      if (ids.length === 0) {
+        await triggerImageOcr(imageId);
+        justTriggered = true;
+        toast.success('提示', '识别任务已提交，等待 Worker 写入记录…');
+        for (let attempt = 0; attempt < 30; attempt++) {
+          await new Promise((r) => setTimeout(r, 450));
+          ids = await getOcrIdsByImage(imageId);
+          if (ids.length > 0) break;
+        }
+        if (ids.length === 0) {
+          toast.warning(
+            '提示',
+            '仍未出现识别记录。请确认服务器已启动 Celery Worker（需 Redis），并已配置 DASHSCOPE_API_KEY；也可稍后再次点刷新。',
+          );
+        }
+      }
+
+      setOcrIds(ids);
+      setSelectedOcrIndex((prev) => {
+        if (!ids.length) return 0;
+        if (justTriggered) return ids.length - 1;
+        return Math.min(prev, ids.length - 1);
+      });
+
+      if (!justTriggered && ids.length > 0) {
+        toast.success('提示', '已刷新识别状态');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '操作失败';
+      toast.error('失败', message);
+    } finally {
+      setActionLoading(false);
+    }
   }
 
   function handleTriggerStructured() {
@@ -472,14 +510,16 @@ export default function ImageDetailScreen() {
               </ThemedText>
             </ScrollView>
           ) : (
-            <ThemedText style={styles.hintText}>暂无识别结果，点击右侧按钮开始识别</ThemedText>
+            <ThemedText style={styles.hintText}>
+              暂无识别结果：点右侧刷新将提交识别并轮询记录；若 Worker 未启动则不会生成结果。
+            </ThemedText>
           )}
           <ModuleActionBar
             count={ocrIds.length}
             selectedIndex={selectedOcrIndex}
             onSelect={setSelectedOcrIndex}
             onCopy={handleCopyOcr}
-            onRefresh={handleTriggerOcr}
+            onRefresh={handleOcrRefresh}
             disabled={actionLoading}
           />
         </AnalysisSectionCard>

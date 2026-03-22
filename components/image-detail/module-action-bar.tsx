@@ -25,7 +25,8 @@ export function ModuleActionBar({
   const activeRing = useColor('text', { light: '#8d6b0e', dark: '#f0d98e' });
   const selectorText = useColor('text', { light: '#5e4a10', dark: '#f0d98e' });
 
-  const safeCount = Math.max(1, count);
+  // count 为 0 时不渲染占位圆点，避免「无记录却仍显示 1」的误导
+  const selectorLength = count > 0 ? count : 0;
 
   return (
     <View style={styles.row}>
@@ -34,7 +35,7 @@ export function ModuleActionBar({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.circleGroup}
       >
-        {Array.from({ length: safeCount }).map((_, index) => {
+        {Array.from({ length: selectorLength }).map((_, index) => {
           const active = index === selectedIndex;
           return (
             <Button

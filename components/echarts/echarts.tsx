@@ -3,8 +3,24 @@ import { getChartHtml } from "./echartsHtml";
 
 const E_HEIGHT = 450;
 
-export function Chart({ option, onGesture, theme }: 
-  { option: any, onGesture: (isBusy: boolean) => void, theme: 'light'|'dark' }) {
+/** 与 echartsHtml 内 postMessage 的 nodeClick 载荷一致 */
+export type NodeClickData = {
+  name: string;
+  category: number | null;
+  symbolSize: number | null;
+  properties: unknown;
+  seriesType: string | null;
+};
+
+type ChartProps = {
+  option: any;
+  onGesture: (isBusy: boolean) => void;
+  theme: "light" | "dark";
+  /** iframe 内 ECharts 节点点击（Web 端） */
+  onNodeClick?: (node: NodeClickData) => void;
+};
+
+export function Chart({ option, onGesture, theme, onNodeClick }: ChartProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // on option change - send message to iframe
@@ -25,27 +41,50 @@ export function Chart({ option, onGesture, theme }:
     iframeRef.current.contentWindow.postMessage(JSON.stringify(message), '*');
   }, [option, theme]);
 
-  // Setup message listener for gesture events
+  // iframe 手势 + 节点点击
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const data = event.data;
-      if (typeof data === 'string') {
-        try {
-          const parsedData = JSON.parse(data);
-          if (parsedData.type === 'gesture') {
-            onGesture(parsedData.active);
-          }
-        } catch (error) {
-          console.error('Failed to parse message:', error);
+      if (typeof data !== "string") return;
+      try {
+        const parsedData = JSON.parse(data) as {
+          type?: string;
+          active?: boolean;
+          name?: string;
+          category?: number | null;
+          symbolSize?: number | null;
+          properties?: unknown;
+          seriesType?: string | null;
+        };
+        if (parsedData.type === "gesture" && typeof parsedData.active === "boolean") {
+          onGesture(parsedData.active);
+          return;
         }
+        if (parsedData.type === "nodeClick" && onNodeClick) {
+          onNodeClick({
+            name: String(parsedData.name ?? ""),
+            category:
+              parsedData.category === undefined || parsedData.category === null
+                ? null
+                : Number(parsedData.category),
+            symbolSize:
+              parsedData.symbolSize === undefined || parsedData.symbolSize === null
+                ? null
+                : Number(parsedData.symbolSize),
+            properties: parsedData.properties ?? null,
+            seriesType: parsedData.seriesType != null ? String(parsedData.seriesType) : null,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to parse message:", error);
       }
     };
 
-    window.addEventListener('message', handleMessage);
+    window.addEventListener("message", handleMessage);
     return () => {
-      window.removeEventListener('message', handleMessage);
+      window.removeEventListener("message", handleMessage);
     };
-  }, [onGesture]);
+  }, [onGesture, onNodeClick]);
 
   // Create blob URL for iframe
   const iframeHtml = getChartHtml(option, theme);

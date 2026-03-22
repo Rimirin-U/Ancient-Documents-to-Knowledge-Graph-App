@@ -205,6 +205,21 @@ async function getIdsFromList(url: string): Promise<number[]> {
   return result.data.ids;
 }
 
+/** React Native 上 blob + FileReader.readAsDataURL 易挂起，改用 arrayBuffer + base64 */
+function arrayBufferToDataUrl(buffer: ArrayBuffer, mimeType: string): string {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
+  }
+  if (typeof globalThis.btoa !== 'function') {
+    throw new Error('当前环境不支持 btoa，无法转换图片');
+  }
+  return `data:${mimeType};base64,${globalThis.btoa(binary)}`;
+}
+
 export async function getImageDataUrl(imageId: number): Promise<string> {
   const response = await apiFetch(`${API_BASE_URL}/api/v1/images/${imageId}`);
 
@@ -212,14 +227,20 @@ export async function getImageDataUrl(imageId: number): Promise<string> {
     throw new Error('获取图片失败');
   }
 
-  const blob = await response.blob();
-  const reader = new FileReader();
+  const mimeType = response.headers.get('content-type') || 'image/jpeg';
 
-  return new Promise((resolve, reject) => {
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error('读取图片失败'));
-    reader.readAsDataURL(blob);
-  });
+  if (Platform.OS === 'web') {
+    const blob = await response.blob();
+    const reader = new FileReader();
+    return new Promise((resolve, reject) => {
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('读取图片失败'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  const buffer = await response.arrayBuffer();
+  return arrayBufferToDataUrl(buffer, mimeType);
 }
 
 export async function getOcrIdsByImage(imageId: number, limit = 50): Promise<number[]> {

@@ -275,7 +275,7 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
         option={option}
         onGesture={() => {}}
         theme={scheme}
-        onNodeClick={(node) => setSelectedNode(node)}
+        onNodeClick={(node: NodeClickData) => setSelectedNode(node)}
       />
       <NodeDetailModal
         node={selectedNode}
