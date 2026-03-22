@@ -1,4 +1,4 @@
-import { API_BASE_URL, authHeaders } from './api';
+import { API_BASE_URL, apiFetch } from './api';
 
 export type UserInfo = {
   id: number;
@@ -8,8 +8,7 @@ export type UserInfo = {
 };
 
 export async function getMe(): Promise<UserInfo> {
-  const headers = await authHeaders();
-  const response = await fetch(`${API_BASE_URL}/api/v1/users/me`, { headers });
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/users/me`);
   const data = await response.json();
   if (!response.ok || !data.success) {
     throw new Error(data.detail || '获取用户信息失败');
@@ -22,10 +21,9 @@ export async function updateMe(params: {
   password?: string;
   email?: string;
 }): Promise<UserInfo> {
-  const headers = await authHeaders();
-  const response = await fetch(`${API_BASE_URL}/api/v1/users/me`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/users/me`, {
     method: 'PUT',
-    headers: { ...headers, 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const data = await response.json();

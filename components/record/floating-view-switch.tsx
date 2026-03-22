@@ -129,11 +129,9 @@ const styles = StyleSheet.create({
   },
   panel: {
     borderRadius: 10,
-    backgroundColor: '#f3f4f6',
     marginBottom: 8,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#d7dae0',
   },
   optionRow: {
     minWidth: 92,
@@ -148,9 +146,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 10,
-    backgroundColor: '#f3f4f6',
     borderWidth: 1,
-    borderColor: '#d7dae0',
     paddingVertical: 7,
     paddingHorizontal: 10,
     gap: 2,

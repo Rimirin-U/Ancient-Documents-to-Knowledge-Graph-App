@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { LucideProps } from 'lucide-react-native';
 import { forwardRef } from 'react';
 import {
+  Platform,
   Pressable,
   TextStyle,
   TouchableOpacity,
@@ -196,41 +197,32 @@ export const Button = forwardRef<View, ButtonProps>(
       }
     };
 
-    // Trigger haptic feedback
     const triggerHapticFeedback = () => {
       if (haptic && !disabled && !loading) {
-        if (process.env.EXPO_OS === 'ios') {
+        if (Platform.OS === 'ios') {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
       }
     };
 
-    // Improved animation handlers for liquid glass effect
     const handlePressIn = (ev?: any) => {
-      'worklet';
-      // Trigger haptic feedback
       triggerHapticFeedback();
 
-      // Scale up with bouncy spring animation
       scale.value = withSpring(1.05, {
         damping: 15,
         stiffness: 400,
         mass: 0.5,
       });
 
-      // Slight brightness increase for glass effect
       brightness.value = withSpring(1.1, {
         damping: 20,
         stiffness: 300,
       });
 
-      // Call original onPressIn if provided
       props.onPressIn?.(ev);
     };
 
     const handlePressOut = (ev?: any) => {
-      'worklet';
-      // Return to original size with smooth spring
       scale.value = withSpring(1, {
         damping: 20,
         stiffness: 400,
@@ -238,13 +230,11 @@ export const Button = forwardRef<View, ButtonProps>(
         overshootClamping: false,
       });
 
-      // Return brightness to normal
       brightness.value = withSpring(1, {
         damping: 20,
         stiffness: 300,
       });
 
-      // Call original onPressOut if provided
       props.onPressOut?.(ev);
     };
 

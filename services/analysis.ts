@@ -1,7 +1,7 @@
 // services/analysis.ts
 // 图像分析相关 API 调用
 import { Platform } from 'react-native';
-import { apiFetch, API_BASE_URL, authHeaders } from './api';
+import { apiFetch, API_BASE_URL } from './api';
 
 type ApiErrorShape = {
   detail?: string;
@@ -148,13 +148,11 @@ export async function uploadImage(uri: string, fileName: string): Promise<Upload
     }
 
     const formData = await buildImageFormData(uri, fileName);
-    const headers = await authHeaders();
 
     let response: Response;
     try {
       response = await apiFetch(`${API_BASE_URL}/api/v1/images/upload`, {
         method: 'POST',
-        headers,
         body: formData,
       });
     } catch (e) {
@@ -188,7 +186,7 @@ export async function uploadImage(uri: string, fileName: string): Promise<Upload
 }
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
+  const response = await apiFetch(url, init);
   const result = (await response.json()) as T & ApiErrorShape;
 
   if (!response.ok) {
@@ -199,8 +197,7 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 async function getIdsFromList(url: string): Promise<number[]> {
-  const headers = await authHeaders();
-  const result = await fetchJson<PagedIdsResponse>(url, { headers });
+  const result = await fetchJson<PagedIdsResponse>(url);
   if (!result.success) {
     throw new Error(result.detail || '查询列表失败');
   }
@@ -209,8 +206,7 @@ async function getIdsFromList(url: string): Promise<number[]> {
 }
 
 export async function getImageDataUrl(imageId: number): Promise<string> {
-  const headers = await authHeaders();
-  const response = await fetch(`${API_BASE_URL}/api/v1/images/${imageId}`, { headers });
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/images/${imageId}`);
 
   if (!response.ok) {
     throw new Error('获取图片失败');
@@ -231,10 +227,8 @@ export async function getOcrIdsByImage(imageId: number, limit = 50): Promise<num
 }
 
 export async function getOcrDetail(ocrId: number): Promise<OcrAnalysis> {
-  const headers = await authHeaders();
   const result = await fetchJson<OcrResultDetailResponse>(
     `${API_BASE_URL}/api/v1/ocr-results/${ocrId}`,
-    { headers }
   );
 
   if (!result.success) {
@@ -257,10 +251,8 @@ export async function getStructuredIdsByOcr(ocrId: number, limit = 50): Promise<
 }
 
 export async function getStructuredDetail(structuredId: number): Promise<StructuredAnalysis> {
-  const headers = await authHeaders();
   const result = await fetchJson<StructuredResultDetailResponse>(
     `${API_BASE_URL}/api/v1/structured-results/${structuredId}`,
-    { headers }
   );
 
   if (!result.success) {
@@ -286,10 +278,8 @@ export async function getRelationGraphIdsByStructured(
 }
 
 export async function getRelationGraphDetail(relationGraphId: number): Promise<RelationGraphAnalysis> {
-  const headers = await authHeaders();
   const result = await fetchJson<RelationGraphDetailResponse>(
     `${API_BASE_URL}/api/v1/relation-graphs/${relationGraphId}`,
-    { headers }
   );
 
   if (!result.success) {
@@ -306,10 +296,8 @@ export async function getRelationGraphDetail(relationGraphId: number): Promise<R
 }
 
 export async function triggerImageOcr(imageId: number): Promise<void> {
-  const headers = await authHeaders();
   const result = await fetchJson<ApiErrorShape>(`${API_BASE_URL}/api/v1/images/${imageId}/ocr`, {
     method: 'POST',
-    headers,
   });
 
   if (!result.success) {
@@ -318,14 +306,9 @@ export async function triggerImageOcr(imageId: number): Promise<void> {
 }
 
 export async function triggerStructuredAnalysis(ocrResultId: number): Promise<void> {
-  const headers = {
-    ...(await authHeaders()),
-    'Content-Type': 'application/json',
-  };
-
   const result = await fetchJson<ApiErrorShape>(`${API_BASE_URL}/api/v1/structured-results`, {
     method: 'POST',
-    headers,
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ocr_result_id: ocrResultId }),
   });
 
@@ -335,14 +318,9 @@ export async function triggerStructuredAnalysis(ocrResultId: number): Promise<vo
 }
 
 export async function triggerRelationGraphAnalysis(structuredResultId: number): Promise<void> {
-  const headers = {
-    ...(await authHeaders()),
-    'Content-Type': 'application/json',
-  };
-
   const result = await fetchJson<ApiErrorShape>(`${API_BASE_URL}/api/v1/relation-graphs`, {
     method: 'POST',
-    headers,
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ structured_result_id: structuredResultId }),
   });
 
@@ -352,8 +330,7 @@ export async function triggerRelationGraphAnalysis(structuredResultId: number): 
 }
 
 export async function getAnalysis(analysisId: string): Promise<any> {
-  const headers = await authHeaders();
-  const response = await fetch(`${API_BASE_URL}/api/analysis/${analysisId}`, { headers });
+  const response = await apiFetch(`${API_BASE_URL}/api/analysis/${analysisId}`);
   if (!response.ok) {
     throw new Error('获取数据失败');
   }

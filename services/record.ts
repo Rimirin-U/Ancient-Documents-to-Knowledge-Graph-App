@@ -1,4 +1,4 @@
-import { API_BASE_URL, authHeaders } from './api';
+import { API_BASE_URL, apiFetch } from './api';
 
 export type RecordImageItem = {
   id: number;
@@ -16,6 +16,20 @@ export type CrossDocRecordItem = {
   previewThumbnailDataUrls: string[];
 };
 
+type ImageItem = {
+  id: number;
+  filename: string;
+  upload_time: string;
+  title: string;
+};
+
+type MultiTaskItem = {
+  id: number;
+  status: string;
+  doc_count: number;
+  created_at: string;
+};
+
 type PagedIdsResponse = {
   success: boolean;
   data: {
@@ -23,6 +37,7 @@ type PagedIdsResponse = {
     skip: number;
     limit: number;
     ids: number[];
+    items?: ImageItem[] | MultiTaskItem[];
   };
   detail?: string;
 };
@@ -74,11 +89,8 @@ export async function getImageRecordList(params?: {
 }): Promise<RecordImageItem[]> {
   const skip = params?.skip ?? 0;
   const limit = params?.limit ?? 50;
-  const headers = await authHeaders();
-
-  const listResponse = await fetch(
+  const listResponse = await apiFetch(
     `${API_BASE_URL}/api/v1/users/images?skip=${skip}&limit=${limit}`,
-    { headers }
   );
   const listResult = (await listResponse.json()) as PagedIdsResponse;
 
@@ -86,17 +98,16 @@ export async function getImageRecordList(params?: {
     throw new Error(listResult.detail || '获取图片记录失败');
   }
 
+  const imageItems = (listResult.data.items ?? []) as ImageItem[];
+
   const items = await Promise.all(
-    listResult.data.ids.map(async (id) => {
-      const info = await getImageInfo(id);
-      return {
-        id,
-        title: info.title || `图片 ${id}`,
-        filename: info.filename,
-        uploadTime: info.upload_time,
-        thumbnailDataUrl: await getImageThumbnailDataUrl(id),
-      } satisfies RecordImageItem;
-    })
+    imageItems.map(async (item) => ({
+      id: item.id,
+      title: item.title || `图片 ${item.id}`,
+      filename: item.filename,
+      uploadTime: item.upload_time,
+      thumbnailDataUrl: await getImageThumbnailDataUrl(item.id),
+    } satisfies RecordImageItem))
   );
 
   return items;
@@ -108,11 +119,8 @@ export async function getCrossDocRecordList(params?: {
 }): Promise<CrossDocRecordItem[]> {
   const skip = params?.skip ?? 0;
   const limit = params?.limit ?? 50;
-  const headers = await authHeaders();
-
-  const listResponse = await fetch(
+  const listResponse = await apiFetch(
     `${API_BASE_URL}/api/v1/users/multi-tasks?skip=${skip}&limit=${limit}`,
-    { headers }
   );
   const listResult = (await listResponse.json()) as PagedIdsResponse;
 
@@ -120,36 +128,28 @@ export async function getCrossDocRecordList(params?: {
     throw new Error(listResult.detail || '获取跨文档记录失败');
   }
 
-  const items = await Promise.all(
-    listResult.data.ids.map(async (id) => {
-      const detail = await getMultiTaskDetail(id);
-      const imageIds = await getPreviewImageIdsFromStructuredResults(detail.structured_result_ids);
-      const previewThumbnailDataUrls = (
-        await Promise.all(imageIds.map((imageId) => getImageThumbnailDataUrl(imageId)))
-      ).filter((url) => Boolean(url));
+  const taskItems = (listResult.data.items ?? []) as MultiTaskItem[];
 
-      const createdDate = new Date(detail.created_at);
-      const month = createdDate.getMonth() + 1;
-      const day = createdDate.getDate();
-      const hhmm = createdDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
-      return {
-        id,
-        title: `跨文档分析 · ${month}月${day}日 ${hhmm}`,
-        filename: `共 ${detail.structured_result_ids.length} 份文书`,
-        uploadTime: detail.created_at,
-        previewThumbnailDataUrls,
-      } satisfies CrossDocRecordItem;
-    })
-  );
+  const items = taskItems.map((task) => {
+    const createdDate = new Date(task.created_at);
+    const month = createdDate.getMonth() + 1;
+    const day = createdDate.getDate();
+    const hhmm = createdDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return {
+      id: task.id,
+      title: `跨文档分析 · ${month}月${day}日 ${hhmm}`,
+      filename: `共 ${task.doc_count} 份文书`,
+      uploadTime: task.created_at,
+      previewThumbnailDataUrls: [],
+    } satisfies CrossDocRecordItem;
+  });
 
   return items;
 }
 
 export async function triggerImageAnalysis(imageId: number): Promise<void> {
-  const headers = await authHeaders();
-  const response = await fetch(`${API_BASE_URL}/api/v1/images/${imageId}/ocr`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/images/${imageId}/ocr`, {
     method: 'POST',
-    headers,
   });
   const result = (await response.json()) as { success?: boolean; detail?: string };
 
@@ -175,10 +175,8 @@ type DeleteImageResponse = {
 };
 
 export async function deleteImageRecord(imageId: number): Promise<void> {
-  const headers = await authHeaders();
-  const response = await fetch(`${API_BASE_URL}/api/v1/images/${imageId}`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/images/${imageId}`, {
     method: 'DELETE',
-    headers,
   });
   const result = (await response.json()) as DeleteImageResponse;
 
@@ -188,13 +186,10 @@ export async function deleteImageRecord(imageId: number): Promise<void> {
 }
 
 export async function createCrossDocTaskFromImages(imageIds: number[]): Promise<number> {
-  const headers = {
-    ...(await authHeaders()),
-    'Content-Type': 'application/json',
-  };
-  const createResponse = await fetch(`${API_BASE_URL}/api/v1/multi-tasks/from-images`, {
+  const jsonHeaders = { 'Content-Type': 'application/json' };
+  const createResponse = await apiFetch(`${API_BASE_URL}/api/v1/multi-tasks/from-images`, {
     method: 'POST',
-    headers,
+    headers: jsonHeaders,
     body: JSON.stringify({ image_ids: imageIds }),
   });
   const createResult = (await createResponse.json()) as MultiTaskFromImagesResponse;
@@ -203,9 +198,9 @@ export async function createCrossDocTaskFromImages(imageIds: number[]): Promise<
     throw new Error(createResult.detail || '创建跨文档任务失败');
   }
 
-  const analyzeResponse = await fetch(`${API_BASE_URL}/api/v1/multi-relation-graphs`, {
+  const analyzeResponse = await apiFetch(`${API_BASE_URL}/api/v1/multi-relation-graphs`, {
     method: 'POST',
-    headers,
+    headers: jsonHeaders,
     body: JSON.stringify({ multi_task_id: createResult.multi_task_id }),
   });
   const analyzeResult = (await analyzeResponse.json()) as TriggerMultiRelationResponse;
@@ -218,11 +213,8 @@ export async function createCrossDocTaskFromImages(imageIds: number[]): Promise<
 }
 
 async function getImageThumbnailDataUrl(imageId: number): Promise<string> {
-  const headers = await authHeaders();
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/images/${imageId}/thumbnail`, {
-      headers,
-    });
+    const response = await apiFetch(`${API_BASE_URL}/api/v1/images/${imageId}/thumbnail`);
     if (!response.ok) {
       throw new Error(`获取缩略图失败: ${response.status}`);
     }
@@ -242,10 +234,7 @@ async function getImageThumbnailDataUrl(imageId: number): Promise<string> {
 }
 
 async function getMultiTaskDetail(taskId: number): Promise<MultiTaskDetailResponse['data']> {
-  const headers = await authHeaders();
-  const response = await fetch(`${API_BASE_URL}/api/v1/multi-tasks/${taskId}`, {
-    headers,
-  });
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/multi-tasks/${taskId}`);
   const result = (await response.json()) as MultiTaskDetailResponse;
 
   if (!response.ok || !result.success) {
@@ -271,10 +260,8 @@ async function getPreviewImageIdsFromStructuredResults(structuredResultIds: numb
 async function getStructuredResult(
   structuredResultId: number
 ): Promise<StructuredResultResponse['data']> {
-  const headers = await authHeaders();
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE_URL}/api/v1/structured-results/${structuredResultId}`,
-    { headers }
   );
   const result = (await response.json()) as StructuredResultResponse;
 
@@ -286,10 +273,7 @@ async function getStructuredResult(
 }
 
 async function getOcrResult(ocrResultId: number): Promise<OcrResultResponse['data']> {
-  const headers = await authHeaders();
-  const response = await fetch(`${API_BASE_URL}/api/v1/ocr-results/${ocrResultId}`, {
-    headers,
-  });
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/ocr-results/${ocrResultId}`);
   const result = (await response.json()) as OcrResultResponse;
 
   if (!response.ok || !result.success) {
@@ -300,10 +284,8 @@ async function getOcrResult(ocrResultId: number): Promise<OcrResultResponse['dat
 }
 
 export async function deleteCrossDocTask(taskId: number): Promise<void> {
-  const headers = await authHeaders();
-  const response = await fetch(`${API_BASE_URL}/api/v1/multi-tasks/${taskId}`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/multi-tasks/${taskId}`, {
     method: 'DELETE',
-    headers,
   });
   const result = (await response.json()) as { success?: boolean; detail?: string };
 
@@ -313,10 +295,7 @@ export async function deleteCrossDocTask(taskId: number): Promise<void> {
 }
 
 async function getImageInfo(imageId: number): Promise<ImageInfoResponse['data']> {
-  const headers = await authHeaders();
-  const response = await fetch(`${API_BASE_URL}/api/v1/images/${imageId}/info`, {
-    headers,
-  });
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/images/${imageId}/info`);
   const result = (await response.json()) as ImageInfoResponse;
 
   if (!response.ok || !result.success) {

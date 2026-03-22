@@ -1,4 +1,5 @@
 import { AuthProvider, useAuth } from '@/context/auth-context';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { ToastProvider } from '@/components/ui/toast';
 import { ThemeProvider } from '@/theme/theme-provider';
 import { Stack, useRouter, useSegments } from "expo-router";
@@ -36,11 +37,12 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <ThemeProvider>
-          <ToastProvider>
-            <RouteGuard>
-              <Stack>
+      <ErrorBoundary>
+        <AuthProvider>
+          <ThemeProvider>
+            <ToastProvider>
+              <RouteGuard>
+                <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="image-detail" options={{ headerShown: true, title: '图片详情' }} />
                 <Stack.Screen name="cross-doc-detail" options={{ headerShown: true, title: '跨文档详情' }} />
@@ -48,11 +50,12 @@ export default function RootLayout() {
                 <Stack.Screen name="register" options={{ headerShown: true, title: '注册' }} />
                 <Stack.Screen name="edit-profile" options={{ headerShown: true, title: '修改个人信息' }} />
               </Stack>
-            </RouteGuard>
-            <StatusBar style="auto" />
-          </ToastProvider>
-        </ThemeProvider>
-      </AuthProvider>
+              </RouteGuard>
+              <StatusBar style="auto" />
+            </ToastProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </ErrorBoundary>
     </GestureHandlerRootView>
   );
 }

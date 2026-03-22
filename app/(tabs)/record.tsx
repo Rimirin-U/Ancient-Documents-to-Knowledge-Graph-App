@@ -321,6 +321,10 @@ export default function RecordScreen() {
             tintColor={textColor}
           />
         }
+        removeClippedSubviews
+        maxToRenderPerBatch={10}
+        windowSize={7}
+        initialNumToRender={8}
       />
     );
   }
@@ -364,6 +368,10 @@ export default function RecordScreen() {
             <ThemedText style={{ color: subtleColor }}>暂无跨文档记录</ThemedText>
           </View>
         }
+        removeClippedSubviews
+        maxToRenderPerBatch={10}
+        windowSize={7}
+        initialNumToRender={8}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -490,9 +498,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
     minWidth: 110,
-    backgroundColor: '#f4f5f7',
     borderWidth: 1,
-    borderColor: '#d7dae0',
   },
   headerMenuItem: {
     paddingVertical: 10,

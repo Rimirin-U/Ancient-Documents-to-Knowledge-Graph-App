@@ -1,4 +1,4 @@
-import { API_BASE_URL, authHeaders } from './api';
+import { API_BASE_URL, apiFetch } from './api';
 
 type ApiErrorShape = {
   detail?: string;
@@ -105,7 +105,7 @@ export type CrossDocImageInfo = {
 };
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
+  const response = await apiFetch(url, init);
   const result = (await response.json()) as T & ApiErrorShape;
 
   if (!response.ok) {
@@ -116,10 +116,8 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export async function getMultiTaskDetail(taskId: number): Promise<MultiTaskDetail> {
-  const headers = await authHeaders();
   const result = await fetchJson<MultiTaskDetailResponse>(
     `${API_BASE_URL}/api/v1/multi-tasks/${taskId}`,
-    { headers }
   );
 
   if (!result.success) {
@@ -136,10 +134,8 @@ export async function getMultiTaskDetail(taskId: number): Promise<MultiTaskDetai
 }
 
 export async function getMultiRelationGraphIdsByTask(taskId: number, limit = 50): Promise<number[]> {
-  const headers = await authHeaders();
   const result = await fetchJson<PagedIdsResponse>(
     `${API_BASE_URL}/api/v1/multi-tasks/${taskId}/multi-relation-graphs?skip=0&limit=${limit}`,
-    { headers }
   );
 
   if (!result.success) {
@@ -150,10 +146,8 @@ export async function getMultiRelationGraphIdsByTask(taskId: number, limit = 50)
 }
 
 export async function getMultiRelationGraphDetail(graphId: number): Promise<MultiRelationGraphAnalysis> {
-  const headers = await authHeaders();
   const result = await fetchJson<MultiRelationGraphDetailResponse>(
     `${API_BASE_URL}/api/v1/multi-relation-graphs/${graphId}`,
-    { headers }
   );
 
   if (!result.success) {
@@ -174,14 +168,9 @@ export async function getMultiRelationGraphDetail(graphId: number): Promise<Mult
 }
 
 export async function triggerMultiRelationGraphAnalysis(taskId: number): Promise<void> {
-  const headers = {
-    ...(await authHeaders()),
-    'Content-Type': 'application/json',
-  };
-
   const result = await fetchJson<ApiErrorShape>(`${API_BASE_URL}/api/v1/multi-relation-graphs`, {
     method: 'POST',
-    headers,
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ multi_task_id: taskId }),
   });
 
@@ -191,10 +180,8 @@ export async function triggerMultiRelationGraphAnalysis(taskId: number): Promise
 }
 
 export async function getImageInfo(imageId: number): Promise<CrossDocImageInfo> {
-  const headers = await authHeaders();
   const result = await fetchJson<ImageInfoResponse>(
     `${API_BASE_URL}/api/v1/images/${imageId}/info`,
-    { headers }
   );
 
   if (!result.success) {

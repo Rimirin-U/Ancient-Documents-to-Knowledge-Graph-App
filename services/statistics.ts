@@ -1,4 +1,4 @@
-import { API_BASE_URL, authHeaders } from './api';
+import { API_BASE_URL, apiFetch } from './api';
 
 export type TimePoint = { year: number; count: number };
 export type LocationPoint = { name: string; count: number };
@@ -22,8 +22,7 @@ type StatisticsResponse = {
 };
 
 export async function fetchStatistics(): Promise<StatisticsData> {
-  const headers = await authHeaders();
-  const response = await fetch(`${API_BASE_URL}/api/v1/statistics`, { headers });
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/statistics`);
 
   const rawText = await response.text();
   let result: StatisticsResponse;

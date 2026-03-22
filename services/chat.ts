@@ -1,4 +1,4 @@
-import { API_BASE_URL, authHeaders } from './api';
+import { API_BASE_URL, apiFetch } from './api';
 
 export type ChatSource = {
   index: number;
@@ -40,19 +40,14 @@ export async function sendChatQuery(
   question: string,
   history?: ChatHistoryTurn[],
 ): Promise<ChatResponseData> {
-  const headers = {
-    ...(await authHeaders()),
-    'Content-Type': 'application/json',
-  };
-
   const body: Record<string, unknown> = { question };
   if (history && history.length > 0) {
     body.history = history.slice(-8);
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/chat/query`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/chat/query`, {
     method: 'POST',
-    headers,
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
 
@@ -94,11 +89,6 @@ export async function sendChatQueryStream(
 ): Promise<void> {
   const { onText, onSources, onDone, onError } = callbacks;
 
-  const headers = {
-    ...(await authHeaders()),
-    'Content-Type': 'application/json',
-  };
-
   const body: Record<string, unknown> = { question };
   if (history && history.length > 0) {
     body.history = history.slice(-8);
@@ -106,9 +96,9 @@ export async function sendChatQueryStream(
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}/api/v1/chat/query-stream`, {
+    response = await apiFetch(`${API_BASE_URL}/api/v1/chat/query-stream`, {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
   } catch (err) {
@@ -185,9 +175,8 @@ export async function sendChatQueryStream(
 }
 
 export async function getKbStatus(): Promise<number> {
-  const headers = await authHeaders();
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/chat/kb-status`, { headers });
+    const response = await apiFetch(`${API_BASE_URL}/api/v1/chat/kb-status`);
     if (!response.ok) return 0;
     const result = (await response.json()) as KbStatusResponse;
     return result.data?.indexed_count ?? 0;
@@ -197,13 +186,9 @@ export async function getKbStatus(): Promise<number> {
 }
 
 export async function triggerReindex(): Promise<string> {
-  const headers = {
-    ...(await authHeaders()),
-    'Content-Type': 'application/json',
-  };
-  const response = await fetch(`${API_BASE_URL}/api/v1/chat/reindex`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/chat/reindex`, {
     method: 'POST',
-    headers,
+    headers: { 'Content-Type': 'application/json' },
   });
   const result = (await response.json()) as { success: boolean; message?: string; detail?: string };
   if (!response.ok || !result.success) {

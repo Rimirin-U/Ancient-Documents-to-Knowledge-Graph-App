@@ -10,7 +10,6 @@ const TOKEN_KEY = 'auth_token';
 const EXPIRES_KEY = 'auth_expires_at';
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
-// 防止多个请求同时触发刷新（Promise 共享）
 let _refreshPromise: Promise<string | null> | null = null;
 
 async function refreshTokenInternal(): Promise<string | null> {
@@ -47,6 +46,24 @@ async function refreshToken(): Promise<string | null> {
 
 export async function getToken(): Promise<string | null> {
   return getStorageItem(TOKEN_KEY);
+}
+
+export async function isTokenValid(): Promise<boolean> {
+  const token = await getStorageItem(TOKEN_KEY);
+  const expiresAt = await getStorageItem(EXPIRES_KEY);
+  if (!token || !expiresAt) return false;
+  return Date.now() < parseInt(expiresAt, 10);
+}
+
+export async function saveToken(token: string): Promise<void> {
+  const expiresAt = (Date.now() + TOKEN_TTL_MS).toString();
+  await setStorageItem(TOKEN_KEY, token);
+  await setStorageItem(EXPIRES_KEY, expiresAt);
+}
+
+export async function clearToken(): Promise<void> {
+  await removeStorageItem(TOKEN_KEY);
+  await removeStorageItem(EXPIRES_KEY);
 }
 
 export async function authHeaders(): Promise<Record<string, string>> {
