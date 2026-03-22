@@ -100,17 +100,12 @@ export async function getImageRecordList(params?: {
 
   const imageItems = (listResult.data.items ?? []) as ImageItem[];
 
-  const items = await Promise.all(
-    imageItems.map(async (item) => ({
-      id: item.id,
-      title: item.title || `图片 ${item.id}`,
-      filename: item.filename,
-      uploadTime: item.upload_time,
-      thumbnailDataUrl: await getImageThumbnailDataUrl(item.id),
-    } satisfies RecordImageItem))
-  );
-
-  return items;
+  return imageItems.map((item) => ({
+    id: item.id,
+    title: item.title || `图片 ${item.id}`,
+    filename: item.filename,
+    uploadTime: item.upload_time,
+  } satisfies RecordImageItem));
 }
 
 export async function getCrossDocRecordList(params?: {
@@ -212,25 +207,8 @@ export async function createCrossDocTaskFromImages(imageIds: number[]): Promise<
   return createResult.multi_task_id;
 }
 
-async function getImageThumbnailDataUrl(imageId: number): Promise<string> {
-  try {
-    const response = await apiFetch(`${API_BASE_URL}/api/v1/images/${imageId}/thumbnail`);
-    if (!response.ok) {
-      throw new Error(`获取缩略图失败: ${response.status}`);
-    }
-    const blob = await response.blob();
-    const reader = new FileReader();
-    return new Promise((resolve, reject) => {
-      reader.onload = () => {
-        resolve(reader.result as string);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    console.warn(`获取缩略图 ${imageId} 失败`, error);
-    return '';
-  }
+export function getThumbnailUrl(imageId: number): string {
+  return `${API_BASE_URL}/api/v1/images/${imageId}/thumbnail`;
 }
 
 async function getMultiTaskDetail(taskId: number): Promise<MultiTaskDetailResponse['data']> {

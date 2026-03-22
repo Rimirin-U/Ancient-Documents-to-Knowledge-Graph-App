@@ -2,9 +2,11 @@ import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { Image } from '@/components/ui/image';
 import { useColor } from '@/hooks/useColor';
-import { RecordImageItem } from '@/services/record';
+import { getToken } from '@/services/api';
+import { RecordImageItem, getThumbnailUrl } from '@/services/record';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { memo, useMemo, useState } from 'react';
+import { ImageSource } from 'expo-image';
+import { memo, useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -34,6 +36,19 @@ function RecordCardBase({
   const checkTint = useColor('tint');
 
   const [imageFailed, setImageFailed] = useState(false);
+  const [imageSource, setImageSource] = useState<ImageSource | undefined>();
+
+  useEffect(() => {
+    let cancelled = false;
+    getToken().then((token) => {
+      if (cancelled) return;
+      setImageSource({
+        uri: getThumbnailUrl(item.id),
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    });
+    return () => { cancelled = true; };
+  }, [item.id]);
 
   const uploadText = useMemo(() => {
     const date = new Date(item.uploadTime);
@@ -46,10 +61,6 @@ function RecordCardBase({
       minute: '2-digit',
     });
   }, [item.uploadTime]);
-
-  const imageSource = item.thumbnailDataUrl
-    ? { uri: item.thumbnailDataUrl }
-    : undefined;
 
   function handlePress() {
     if (selectable) {
