@@ -99,7 +99,7 @@ function RecordCardBase({
             />
           ) : (
             <View style={styles.fallback}>
-              <ThemedText>缩略图</ThemedText>
+              <MaterialIcons name="image" size={40} color={muted} />
             </View>
           )}
         </View>

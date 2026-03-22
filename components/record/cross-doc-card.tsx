@@ -88,7 +88,7 @@ function CrossDocCardBase({
             ))
           ) : (
             <View style={[styles.stackItem, styles.singleFallback, { borderColor: outline, backgroundColor: thumbnailBg }]}>
-              <ThemedText>缩略图</ThemedText>
+              <MaterialIcons name="collections" size={34} color={muted} />
             </View>
           )}
         </View>
