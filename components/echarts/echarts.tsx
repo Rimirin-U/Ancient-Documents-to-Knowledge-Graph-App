@@ -16,11 +16,12 @@ type ChartProps = {
   option: any;
   onGesture: (isBusy: boolean) => void;
   theme: "light" | "dark";
+  height?: number;
   /** iframe 内 ECharts 节点点击（Web 端） */
   onNodeClick?: (node: NodeClickData) => void;
 };
 
-export function Chart({ option, onGesture, theme, onNodeClick }: ChartProps) {
+export function Chart({ option, onGesture, theme, height = 450, onNodeClick }: ChartProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // on option change - send message to iframe
@@ -97,7 +98,7 @@ export function Chart({ option, onGesture, theme, onNodeClick }: ChartProps) {
     <div
       style={{
         width: 'calc(100% - 32px)',
-        height: `${E_HEIGHT}px`,
+        height: `${height}px`,
         borderRadius: '16px',
         overflow: 'hidden',
         backgroundColor: theme === 'dark' ? '#1a1a1a' : '#ffffff',

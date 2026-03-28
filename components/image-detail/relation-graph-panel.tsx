@@ -102,10 +102,12 @@ function NodeDetailModal({
   node,
   visible,
   onClose,
+  categories,
 }: {
   node: NodeClickData | null;
   visible: boolean;
   onClose: () => void;
+  categories: { name: string }[];
 }) {
   const overlayBg = 'rgba(0,0,0,0.55)';
   const cardBg = useColor('background', { light: '#ffffff', dark: '#1e293b' });
@@ -116,12 +118,21 @@ function NodeDetailModal({
 
   if (!node) return null;
 
-  const meta = typeof node.category === 'number' ? CATEGORY_META[node.category] : null;
-  const categoryLabel = meta?.label ?? '实体';
-  const badgeColor = meta?.color ?? '#64748b';
+  // 动态获取分类名（兼容单文档和多文档）
+  const categoryName = typeof node.category === 'number' && categories[node.category] 
+    ? categories[node.category].name 
+    : '实体';
+
+  // 根据分类名分配颜色
+  let badgeColor = '#64748b';
+  if (categoryName === '卖方') badgeColor = '#dc2626';
+  else if (categoryName === '买方') badgeColor = '#2563eb';
+  else if (categoryName === '中人') badgeColor = '#059669';
+  else if (categoryName === '契约' || categoryName === '地块') badgeColor = '#d97706';
+  else if (categoryName === '信息' || categoryName === '跨角色') badgeColor = '#7c3aed';
 
   // 信息节点的 name 是内部 ID（__info_xxx），对用户显示第一条属性值或 category 名
-  const isInfoNode = node.category === 4;
+  const isInfoNode = categoryName === '信息';
   const props = node.properties ?? {};
   const firstPropValue = Object.values(props)[0];
   const displayName = isInfoNode && firstPropValue
@@ -146,7 +157,7 @@ function NodeDetailModal({
               {displayName}
             </ThemedText>
             <View style={[styles.categoryBadge, { backgroundColor: badgeColor + '1a', borderColor: badgeColor + '55' }]}>
-              <ThemedText style={[styles.categoryText, { color: badgeColor }]}>{categoryLabel}</ThemedText>
+              <ThemedText style={[styles.categoryText, { color: badgeColor }]}>{categoryName}</ThemedText>
             </View>
           </View>
 
@@ -155,7 +166,7 @@ function NodeDetailModal({
               不再重复显示属性行，改为展示简短的字段说明 */}
           {isInfoNode ? (
             <ThemedText style={[styles.infoNodeHint, { color: subtleColor }]}>
-              {categoryLabel}属性 · 点击空白处关闭
+              {categoryName}属性 · 点击空白处关闭
             </ThemedText>
           ) : extraProps.length > 0 ? (
             <ScrollView style={styles.propsScroll} showsVerticalScrollIndicator={false}>
@@ -192,7 +203,11 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
   const [selectedNode, setSelectedNode] = useState<NodeClickData | null>(null);
 
   if (!graphContent) {
-    return <ThemedText>暂无可渲染关系图，点击下方按钮可重新生成</ThemedText>;
+    return (
+      <ThemedText style={{ opacity: 0.65, fontSize: 14, lineHeight: 20 }}>
+        结构化分析完成后将自动生成关系图；若暂无图谱可点右侧刷新手动触发。
+      </ThemedText>
+    );
   }
 
   // ECharts 通过 WebView JSON 传参，各节点/连线的 label、lineStyle、itemStyle 已由后端按角色配置。
@@ -281,6 +296,7 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
         node={selectedNode}
         visible={!!selectedNode}
         onClose={() => setSelectedNode(null)}
+        categories={graphContent.categories}
       />
     </>
   );
