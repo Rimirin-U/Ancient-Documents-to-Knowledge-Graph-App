@@ -203,7 +203,11 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
   const [selectedNode, setSelectedNode] = useState<NodeClickData | null>(null);
 
   if (!graphContent) {
-    return <ThemedText>暂无可渲染关系图，点击下方按钮可重新生成</ThemedText>;
+    return (
+      <ThemedText style={{ opacity: 0.65, fontSize: 14, lineHeight: 20 }}>
+        结构化分析完成后将自动生成关系图；若暂无图谱可点右侧刷新手动触发。
+      </ThemedText>
+    );
   }
 
   // ECharts 通过 WebView JSON 传参，各节点/连线的 label、lineStyle、itemStyle 已由后端按角色配置。

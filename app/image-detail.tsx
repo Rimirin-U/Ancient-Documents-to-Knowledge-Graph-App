@@ -181,7 +181,8 @@ export default function ImageDetailScreen() {
     return () => {
       active = false;
     };
-  }, [ocrIds, selectedOcrIndex]);
+    // OCR 从处理中变为完成时，后端可能刚写入结构化记录；依赖 status 以便自动拉取「分析结果」
+  }, [ocrIds, selectedOcrIndex, selectedOcr?.status]);
 
   useEffect(() => {
     const max = Math.max(structuredIds.length, 1) - 1;
@@ -221,7 +222,8 @@ export default function ImageDetailScreen() {
     return () => {
       active = false;
     };
-  }, [structuredIds, selectedStructuredIndex]);
+    // 结构化完成后自动拉取关系图 ID，配合后端流水线无需手动点刷新
+  }, [structuredIds, selectedStructuredIndex, selectedStructured?.status]);
 
   useEffect(() => {
     const max = Math.max(relationGraphIds.length, 1) - 1;
@@ -568,7 +570,9 @@ export default function ImageDetailScreen() {
           ) : translatedStructuredItems.length ? (
             <StructuredContentList items={translatedStructuredItems} onCopyValue={copyStructuredValue} />
           ) : (
-            <ThemedText style={styles.hintText}>暂无分析结果，点击右侧按钮开始分析</ThemedText>
+            <ThemedText style={styles.hintText}>
+              识别完成后将自动结构化分析；若暂无结果可点右侧刷新手动触发。
+            </ThemedText>
           )}
           <ModuleActionBar
             count={structuredIds.length}
@@ -586,6 +590,10 @@ export default function ImageDetailScreen() {
               <ActivityIndicator size="small" color="#3b82f6" />
               <ThemedText style={styles.processingText}>图谱生成中，请稍候...</ThemedText>
             </View>
+          ) : relationGraphIds.length === 0 ? (
+            <ThemedText style={styles.hintText}>
+              等待结构化完成后将自动生成关系图；也可在结构化就绪后点右侧刷新。
+            </ThemedText>
           ) : (
             <RelationGraphPanel content={selectedRelation?.content} />
           )}
