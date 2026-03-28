@@ -204,6 +204,79 @@ export default function CrossDocDetailScreen() {
     toast.info('下载', `已选择下载：${image.title}`);
   }
 
+  async function handleExportCSV() {
+    if (!structuredList.length) {
+      toast.warning('提示', '暂无数据可导出');
+      return;
+    }
+    try {
+      const headers = ['文书ID', '时间', '地点', '卖方', '买方', '中人', '价格', '标的'];
+      const rows = structuredList.map(item => {
+        try {
+          const content = JSON.parse(item.content);
+          return [
+            item.id,
+            content.Time || '',
+            content.Location || '',
+            content.Seller || '',
+            content.Buyer || '',
+            content.Middleman || '',
+            content.Price || '',
+            content.Subject || '',
+          ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
+        } catch {
+          return '';
+        }
+      }).filter(Boolean);
+      
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      
+      if (Platform.OS === 'web') {
+        const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' }); // Add BOM for Excel
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `cross_doc_export_${taskId}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('导出成功', 'CSV文件已下载');
+      } else {
+        await Clipboard.setStringAsync(csvContent);
+        toast.success('导出成功', 'CSV内容已复制到剪贴板，可粘贴至Excel');
+      }
+    } catch (e) {
+      toast.error('导出失败', '生成CSV时发生错误');
+    }
+  }
+
+  async function handleExportGraphJSON() {
+    if (!selectedRelation?.content) {
+      toast.warning('提示', '暂无图谱数据可导出');
+      return;
+    }
+    try {
+      const jsonContent = typeof selectedRelation.content === 'string' 
+        ? selectedRelation.content 
+        : JSON.stringify(selectedRelation.content, null, 2);
+        
+      if (Platform.OS === 'web') {
+        const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `graph_export_${taskId}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('导出成功', '图谱JSON文件已下载');
+      } else {
+        await Clipboard.setStringAsync(jsonContent);
+        toast.success('导出成功', '图谱JSON已复制到剪贴板');
+      }
+    } catch (e) {
+      toast.error('导出失败', '生成JSON时发生错误');
+    }
+  }
+
   return (
     <ThemedView style={[styles.container, { backgroundColor: pageBg }]}>
       {loading ? (
@@ -267,6 +340,20 @@ export default function CrossDocDetailScreen() {
               />
             </AnalysisSectionCard>
           )}
+
+          <AnalysisSectionCard title="数据导出" defaultOpen>
+            <ThemedText style={styles.blockText}>
+              支持将结构化数据和关系图谱导出，便于在 Excel 或 Gephi 等学术软件中进一步分析。
+            </ThemedText>
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+              <Button style={{ flex: 1 }} variant="secondary" onPress={handleExportCSV}>
+                导出结构化 CSV
+              </Button>
+              <Button style={{ flex: 1 }} variant="secondary" onPress={handleExportGraphJSON}>
+                导出图谱 JSON
+              </Button>
+            </View>
+          </AnalysisSectionCard>
         </ScrollView>
       ) : null}
 

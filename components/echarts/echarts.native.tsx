@@ -19,11 +19,13 @@ export function Chart({
   option,
   onGesture,
   theme,
+  height = 480,
   onNodeClick,
 }: {
   option: any;
   onGesture: (isBusy: boolean) => void;
   theme: 'light' | 'dark';
+  height?: number;
   onNodeClick?: (node: NodeClickData) => void;
 }) {
   const webViewRef = useRef<WebView>(null);
@@ -40,7 +42,7 @@ export function Chart({
 
   return (
     <View style={{
-      height: E_HEIGHT,
+      height: height,
       borderRadius: 16,
       overflow: 'hidden',
       backgroundColor: theme === 'dark' ? 'black' : 'white',
