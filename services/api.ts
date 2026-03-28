@@ -82,12 +82,33 @@ export async function apiFetch(
   retry = true,
 ): Promise<Response> {
   const token = await getToken();
-  const headers = new Headers(init?.headers);
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+  
+  // 使用普通对象代替 Headers 实例，避免在 React Native 中与 FormData 配合时丢失 Authorization 请求头
+  const headers: Record<string, string> = {};
+  
+  if (init?.headers) {
+    if (init.headers instanceof Headers) {
+      init.headers.forEach((value, key) => {
+        headers[key.toLowerCase()] = value;
+      });
+    } else if (Array.isArray(init.headers)) {
+      init.headers.forEach(([key, value]) => {
+        headers[key.toLowerCase()] = value;
+      });
+    } else {
+      Object.entries(init.headers).forEach(([key, value]) => {
+        headers[key.toLowerCase()] = value;
+      });
+    }
+  }
+
+  if (token) {
+    headers['authorization'] = `Bearer ${token}`;
+  }
 
   // multipart/form-data 必须由运行时自动附带 boundary；若保留 application/json 等 Content-Type 会导致上传失败，部分环境下表现为 Network request failed
   if (init?.body instanceof FormData) {
-    headers.delete('Content-Type');
+    delete headers['content-type'];
   }
 
   const response = await fetch(input, { ...init, headers });
@@ -95,7 +116,7 @@ export async function apiFetch(
   if (response.status === 401 && retry) {
     const newToken = await refreshToken();
     if (newToken) {
-      headers.set('Authorization', `Bearer ${newToken}`);
+      headers['authorization'] = `Bearer ${newToken}`;
       return apiFetch(input, { ...init, headers }, false);
     }
     // 刷新失败，清除凭证，由各页面处理跳转登录
