@@ -31,10 +31,8 @@ module.exports = {
     android: {
       usesCleartextTraffic: true,
       adaptiveIcon: {
-        backgroundColor: '#E6F4FE',
-        foregroundImage: './assets/images/android-icon-foreground.png',
-        backgroundImage: './assets/images/android-icon-background.png',
-        monochromeImage: './assets/images/android-icon-monochrome.png',
+        backgroundColor: '#FFFFFF',
+        foregroundImage: './assets/images/app-icon.jpg',
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
