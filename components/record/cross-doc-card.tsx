@@ -2,10 +2,50 @@ import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { Image } from '@/components/ui/image';
 import { useColor } from '@/hooks/useColor';
-import { CrossDocRecordItem } from '@/services/record';
+import { getToken } from '@/services/api';
+import { CrossDocRecordItem, getThumbnailUrl } from '@/services/record';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { memo, useMemo } from 'react';
+import { ImageSource } from 'expo-image';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+
+function StackedPreviewThumb({
+  imageId,
+  recyclingKey,
+}: {
+  imageId: number;
+  recyclingKey: string;
+}) {
+  const [source, setSource] = useState<ImageSource | undefined>();
+
+  useEffect(() => {
+    let cancelled = false;
+    getToken().then((token) => {
+      if (cancelled) return;
+      setSource({
+        uri: getThumbnailUrl(imageId),
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [imageId]);
+
+  if (!source) {
+    return <View style={styles.image} />;
+  }
+
+  return (
+    <Image
+      source={source}
+      recyclingKey={recyclingKey}
+      contentFit="cover"
+      variant="default"
+      style={styles.image}
+    />
+  );
+}
 
 type CrossDocCardProps = {
   item: CrossDocRecordItem;
@@ -49,7 +89,7 @@ function CrossDocCardBase({
     onPress?.(item);
   }
 
-  const previews = item.previewThumbnailDataUrls.slice(0, 3);
+  const previewIds = item.previewImageIds.slice(0, 3);
 
   return (
     <Pressable onPress={handlePress}>
@@ -63,26 +103,23 @@ function CrossDocCardBase({
         ) : null}
 
         <View style={styles.stackWrap}>
-          {previews.length ? (
-            previews.map((url, index) => (
+          {previewIds.length ? (
+            previewIds.map((imageId, index) => (
               <View
-                key={`${item.id}-${index}`}
+                key={`${item.id}-${imageId}`}
                 style={[
                   styles.stackItem,
                   {
                     borderColor: outline,
                     backgroundColor: thumbnailBg,
                     left: index * 12,
-                    zIndex: previews.length - index,
+                    zIndex: previewIds.length - index,
                   },
                 ]}
               >
-                <Image
-                  source={{ uri: url }}
-                  recyclingKey={`cross-doc-${item.id}-p${index}`}
-                  contentFit="cover"
-                  variant="default"
-                  style={styles.image}
+                <StackedPreviewThumb
+                  imageId={imageId}
+                  recyclingKey={`cross-doc-${item.id}-p${imageId}`}
                 />
               </View>
             ))

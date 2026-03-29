@@ -13,7 +13,8 @@ export type CrossDocRecordItem = {
   title: string;
   filename: string;
   uploadTime: string;
-  previewThumbnailDataUrls: string[];
+  /** 参与该跨文档任务的前若干张文书图片 ID，用于列表缩略图 */
+  previewImageIds: number[];
 };
 
 type ImageItem = {
@@ -28,6 +29,7 @@ type MultiTaskItem = {
   status: string;
   doc_count: number;
   created_at: string;
+  preview_image_ids?: number[];
 };
 
 type PagedIdsResponse = {
@@ -155,19 +157,38 @@ export async function getCrossDocRecordList(params?: {
 
   const taskItems = (listResult.data.items ?? []) as MultiTaskItem[];
 
-  const items = taskItems.map((task) => {
-    const createdDate = new Date(task.created_at);
-    const month = createdDate.getMonth() + 1;
-    const day = createdDate.getDate();
-    const hhmm = createdDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
-    return {
-      id: task.id,
-      title: `跨文档分析 · ${month}月${day}日 ${hhmm}`,
-      filename: `共 ${task.doc_count} 份文书`,
-      uploadTime: task.created_at,
-      previewThumbnailDataUrls: [],
-    } satisfies CrossDocRecordItem;
-  });
+  const items = await Promise.all(
+    taskItems.map(async (task) => {
+      const createdDate = new Date(task.created_at);
+      const month = createdDate.getMonth() + 1;
+      const day = createdDate.getDate();
+      const hhmm = createdDate.toLocaleTimeString('zh-CN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+
+      let previewImageIds = Array.isArray(task.preview_image_ids) ? task.preview_image_ids : [];
+      if (previewImageIds.length === 0) {
+        try {
+          const detail = await getMultiTaskDetail(task.id);
+          previewImageIds = await getPreviewImageIdsFromStructuredResults(
+            detail.structured_result_ids,
+          );
+        } catch {
+          previewImageIds = [];
+        }
+      }
+
+      return {
+        id: task.id,
+        title: `跨文档分析 · ${month}月${day}日 ${hhmm}`,
+        filename: `共 ${task.doc_count} 份文书`,
+        uploadTime: task.created_at,
+        previewImageIds,
+      } satisfies CrossDocRecordItem;
+    }),
+  );
 
   return items;
 }
