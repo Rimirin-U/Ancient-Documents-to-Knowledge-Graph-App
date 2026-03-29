@@ -40,6 +40,7 @@ function RecordCardBase({
 
   useEffect(() => {
     let cancelled = false;
+    setImageFailed(false);
     getToken().then((token) => {
       if (cancelled) return;
       setImageSource({
@@ -90,8 +91,9 @@ function RecordCardBase({
         <View style={[styles.thumbnail, { borderColor: outline, backgroundColor: thumbnailBg }]}> 
           {!imageFailed && imageSource ? (
             <Image
+              key={`record-thumb-view-${item.id}`}
               source={imageSource}
-              recyclingKey={`record-thumb-${item.id}`}
+              recyclingKey={getThumbnailUrl(item.id)}
               contentFit="cover"
               variant="default"
               style={styles.image}

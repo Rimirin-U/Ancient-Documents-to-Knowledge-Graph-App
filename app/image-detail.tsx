@@ -83,10 +83,18 @@ export default function ImageDetailScreen() {
   const toast = useToast();
   const pageSurface = useColor('background', { light: '#f6f7f9', dark: '#1d2229' });
   const textColor = useColor('text', { light: '#000', dark: '#fff' });
-  const params = useLocalSearchParams<{ imageId?: string; title?: string }>();
+  const params = useLocalSearchParams<{ imageId?: string | string[]; title?: string | string[] }>();
 
-  const imageId = useMemo(() => Number(params.imageId), [params.imageId]);
-  const pageTitle = useMemo(() => params.title || '图片详情', [params.title]);
+  const imageId = useMemo(() => {
+    const raw = params.imageId;
+    const s = Array.isArray(raw) ? raw[0] : raw;
+    return Number(s);
+  }, [params.imageId]);
+  const pageTitle = useMemo(() => {
+    const raw = params.title;
+    const s = Array.isArray(raw) ? raw[0] : raw;
+    return s || '图片详情';
+  }, [params.title]);
 
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -106,6 +114,10 @@ export default function ImageDetailScreen() {
   const [isEditingOcr, setIsEditingOcr] = useState(false);
   const [editingOcrText, setEditingOcrText] = useState('');
 
+  /** 避免快速切换记录时，较慢的请求覆盖当前应显示的图片 */
+  const activeImageIdRef = useRef(imageId);
+  activeImageIdRef.current = imageId;
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: pageTitle,
@@ -113,7 +125,8 @@ export default function ImageDetailScreen() {
   }, [navigation, pageTitle]);
 
   const loadBaseData = useCallback(async (showLoading = true) => {
-    if (!Number.isFinite(imageId)) {
+    const targetImageId = imageId;
+    if (!Number.isFinite(targetImageId)) {
       setErrorMessage('缺少 imageId 参数');
       setLoading(false);
       return;
@@ -128,18 +141,25 @@ export default function ImageDetailScreen() {
 
     try {
       const [nextImageDataUrl, nextOcrIds] = await Promise.all([
-        getImageDataUrl(imageId),
-        getOcrIdsByImage(imageId),
+        getImageDataUrl(targetImageId),
+        getOcrIdsByImage(targetImageId),
       ]);
+
+      if (activeImageIdRef.current !== targetImageId) {
+        return;
+      }
 
       setImageDataUrl(nextImageDataUrl);
       setOcrIds(nextOcrIds);
       setSelectedOcrIndex(nextOcrIds.length ? nextOcrIds.length - 1 : 0);
     } catch (error) {
+      if (activeImageIdRef.current !== targetImageId) {
+        return;
+      }
       const message = error instanceof Error ? error.message : '加载图片详情失败';
       setErrorMessage(message);
     } finally {
-      if (showLoading) {
+      if (showLoading && activeImageIdRef.current === targetImageId) {
         setLoading(false);
       }
     }
