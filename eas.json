@@ -12,6 +12,16 @@
       }
     },
     "preview": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "http://8.162.9.49:3000"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview-release": {
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "http://8.162.9.49:3000"
