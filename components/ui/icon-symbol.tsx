@@ -24,6 +24,7 @@ const MAPPING = {
   'person.fill': 'person',
   'clock.fill': 'schedule',
   'message.fill': 'chat',
+  'chart.bar.fill': 'bar-chart',
 } as IconMapping;
 
 /**

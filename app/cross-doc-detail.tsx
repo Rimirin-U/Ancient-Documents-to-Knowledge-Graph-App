@@ -343,14 +343,14 @@ export default function CrossDocDetailScreen() {
 
           <AnalysisSectionCard title="数据导出" defaultOpen>
             <ThemedText style={styles.blockText}>
-              支持将结构化数据和关系图谱导出，便于在 Excel 或 Gephi 等学术软件中进一步分析。
+              将结构化数据和关系图谱导出，以在其他软件中进一步分析。
             </ThemedText>
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
-              <Button style={{ flex: 1 }} variant="secondary" onPress={handleExportCSV}>
-                导出结构化 CSV
+              <Button style={{ flex: 1 }} variant="secondary" onPress={handleExportCSV} textStyle={{ fontSize: 14 }} numberOfLines={1}>
+                导出CSV
               </Button>
-              <Button style={{ flex: 1 }} variant="secondary" onPress={handleExportGraphJSON}>
-                导出图谱 JSON
+              <Button style={{ flex: 1 }} variant="secondary" onPress={handleExportGraphJSON} textStyle={{ fontSize: 14 }} numberOfLines={1}>
+                导出图谱JSON
               </Button>
             </View>
           </AnalysisSectionCard>

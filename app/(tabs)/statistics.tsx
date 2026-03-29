@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
   },
-  statValue: { fontSize: 22, fontWeight: 'bold' },
+  statValue: { fontSize: 20, fontWeight: 'bold' },
   statLabel: { fontSize: 11, opacity: 0.6, textAlign: 'center' },
   section: {
     borderRadius: 14,

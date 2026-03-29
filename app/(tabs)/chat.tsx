@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
+import { AvoidKeyboard } from '@/components/ui/avoid-keyboard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColor } from '@/hooks/useColor';
@@ -13,6 +14,7 @@ import {
 } from '@/services/chat';
 import { getStorageItem, setStorageItem, removeStorageItem } from '@/services/storage';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { Send } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from '@react-navigation/native';
@@ -476,7 +478,7 @@ export default function ChatScreen() {
 
       {/* 输入栏 */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         style={[
           styles.inputContainer,
@@ -500,14 +502,16 @@ export default function ChatScreen() {
           onPress={handleSend}
           disabled={loading || !inputText.trim()}
           style={styles.sendButton}
+          icon={Send}
         >
-          {loading ? (
+          {loading && (
             <ActivityIndicator size="small" color={messageUserFg} />
-          ) : (
-            <MaterialIcons name="send" size={20} color={messageUserFg} />
           )}
         </Button>
       </KeyboardAvoidingView>
+
+      {/* 动态键盘间距 */}
+      <AvoidKeyboard offset={insets.bottom} />
     </ThemedView>
   );
 }

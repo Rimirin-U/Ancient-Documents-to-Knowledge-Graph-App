@@ -46,6 +46,7 @@ export interface ButtonProps extends Omit<TouchableOpacityProps, 'style'> {
   loadingVariant?: SpinnerVariant;
   style?: ViewStyle | ViewStyle[];
   textStyle?: TextStyle;
+  numberOfLines?: number;
 }
 
 export const Button = forwardRef<View, ButtonProps>(
@@ -63,6 +64,7 @@ export const Button = forwardRef<View, ButtonProps>(
       loadingVariant = 'default',
       style,
       textStyle,
+      numberOfLines,
       ...props
     },
     ref
@@ -336,7 +338,7 @@ export const Button = forwardRef<View, ButtonProps>(
               {icon && (
                 <Icon name={icon} color={contentColor} size={iconSize} />
               )}
-              <Text style={[finalTextStyle, textStyle]}>{children}</Text>
+              <Text style={[finalTextStyle, textStyle]} numberOfLines={numberOfLines}>{children}</Text>
             </View>
           ) : (
             <View
@@ -368,7 +370,7 @@ export const Button = forwardRef<View, ButtonProps>(
         ) : typeof children === 'string' ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             {icon && <Icon name={icon} color={contentColor} size={iconSize} />}
-            <Text style={[finalTextStyle, textStyle]}>{children}</Text>
+            <Text style={[finalTextStyle, textStyle]} numberOfLines={numberOfLines}>{children}</Text>
           </View>
         ) : (
           children
