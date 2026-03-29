@@ -16,7 +16,7 @@ module.exports = {
     slug: 'testapp',
     version: '1.0.0',
     orientation: 'portrait',
-    icon: './assets/images/app-icon.jpg',
+    icon: './assets/images/软件图标.png',
     scheme: 'testapp',
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
@@ -32,7 +32,7 @@ module.exports = {
       usesCleartextTraffic: true,
       adaptiveIcon: {
         backgroundColor: '#FFFFFF',
-        foregroundImage: './assets/images/app-icon.jpg',
+        foregroundImage: './assets/images/软件图标.png',
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
