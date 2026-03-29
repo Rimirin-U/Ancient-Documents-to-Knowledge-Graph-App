@@ -82,6 +82,7 @@ export default function ImageDetailScreen() {
   const { height } = useWindowDimensions();
   const toast = useToast();
   const pageSurface = useColor('background', { light: '#f6f7f9', dark: '#1d2229' });
+  const textColor = useColor('text', { light: '#000', dark: '#fff' });
   const params = useLocalSearchParams<{ imageId?: string; title?: string }>();
 
   const imageId = useMemo(() => Number(params.imageId), [params.imageId]);
@@ -589,7 +590,7 @@ export default function ImageDetailScreen() {
               {isEditingOcr ? (
                 <View>
                   <TextInput
-                    style={[styles.ocrTextInput, { color: useColor('text', { light: '#000', dark: '#fff' }) }]}
+                    style={[styles.ocrTextInput, { color: textColor }]}
                     multiline
                     value={editingOcrText}
                     onChangeText={setEditingOcrText}
