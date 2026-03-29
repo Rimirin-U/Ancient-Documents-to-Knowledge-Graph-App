@@ -92,7 +92,7 @@ export default function Index() {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: Math.max(insets.top, 20), paddingBottom: insets.bottom + 24 },
+          { paddingTop: Math.max(insets.top, 60), paddingBottom: insets.bottom + 24 },
         ]}
         showsVerticalScrollIndicator={false}>
         <View style={[styles.hero, { backgroundColor: accentBg, borderColor: accentBorder }]}>

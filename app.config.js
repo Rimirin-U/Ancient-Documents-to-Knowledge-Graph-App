@@ -12,11 +12,11 @@ process.env.EXPO_PUBLIC_API_BASE_URL = apiBaseUrl;
 
 module.exports = {
   expo: {
-    name: 'testapp',
+    name: '文渊智图',
     slug: 'testapp',
     version: '1.0.0',
     orientation: 'portrait',
-    icon: './assets/images/icon.png',
+    icon: './assets/images/app-icon.jpg',
     scheme: 'testapp',
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
