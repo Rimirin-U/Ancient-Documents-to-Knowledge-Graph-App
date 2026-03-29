@@ -244,6 +244,8 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
         links: graphContent.links,
         categories: graphContent.categories,
         roam: true,
+        edgeSymbol: ['none', 'arrow'],
+        edgeSymbolSize: [0, 8],
         // 全局标签默认（per-node label 会覆盖此处）
         label: {
           show: true,
