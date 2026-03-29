@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { Image } from '@/components/ui/image';
+import { useAuth } from '@/context/auth-context';
 import { useColor } from '@/hooks/useColor';
 import { getToken } from '@/services/api';
 import { RecordImageItem, getThumbnailUrl } from '@/services/record';
@@ -28,6 +29,7 @@ function RecordCardBase({
   onToggleSelect,
   onPress,
 }: RecordCardProps) {
+  const { userId } = useAuth();
   const cardBg = useColor('background', { light: '#f7f7f8', dark: '#1f2226' });
   const muted = useColor('icon', { light: '#5f6368', dark: '#a9b1ba' });
   const outline = useColor('icon', { light: '#d9dce1', dark: '#383d44' });
@@ -40,15 +42,16 @@ function RecordCardBase({
 
   useEffect(() => {
     let cancelled = false;
+    setImageFailed(false);
     getToken().then((token) => {
       if (cancelled) return;
       setImageSource({
-        uri: getThumbnailUrl(item.id),
+        uri: getThumbnailUrl(item.id, userId),
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
     });
     return () => { cancelled = true; };
-  }, [item.id]);
+  }, [item.id, userId]);
 
   const uploadText = useMemo(() => {
     const date = new Date(item.uploadTime);
@@ -90,8 +93,10 @@ function RecordCardBase({
         <View style={[styles.thumbnail, { borderColor: outline, backgroundColor: thumbnailBg }]}> 
           {!imageFailed && imageSource ? (
             <Image
+              key={`record-thumb-view-${item.id}`}
               source={imageSource}
-              recyclingKey={`record-thumb-${item.id}`}
+              recyclingKey={getThumbnailUrl(item.id, userId)}
+              cachePolicy="none"
               contentFit="cover"
               variant="default"
               style={styles.image}

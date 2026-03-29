@@ -83,8 +83,53 @@ export type CrossDocStatistics = {
     location: string;
     transaction_count: number;
     years?: number[];
+    transfers?: Array<{
+      from?: string;
+      to?: string;
+      time?: string;
+      price?: string;
+    }>;
   }>;
   land_chain_count?: number;
+  clan_groups?: Array<{
+    surname: string;
+    members: string[];
+    count: number;
+  }>;
+  witness_network?: Array<{
+    name: string;
+    witness_count: number;
+    doc_count: number;
+    witnessed_parties: string[];
+  }>;
+  decade_distribution?: Array<{
+    decade: string;
+    year: number;
+    count: number;
+  }>;
+  price_trend?: Array<{
+    doc_id: string;
+    year: number | null;
+    price: number;
+    raw: string;
+    location: string;
+  }>;
+  avg_price?: number | null;
+  total_transaction_value?: number | null;
+  network_metrics?: {
+    avg_degree?: number;
+    density?: number;
+    components?: number;
+    bridge_people?: Array<{
+      name: string;
+      betweenness: number;
+    }>;
+    communities?: Array<{
+      id: number;
+      members: string[];
+      size: number;
+    }>;
+  };
 };
 
 export type MultiRelationGraphAnalysis = {

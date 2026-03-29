@@ -220,8 +220,10 @@ function arrayBufferToDataUrl(buffer: ArrayBuffer, mimeType: string): string {
   return `data:${mimeType};base64,${globalThis.btoa(binary)}`;
 }
 
-export async function getImageDataUrl(imageId: number): Promise<string> {
-  const response = await apiFetch(`${API_BASE_URL}/api/v1/images/${imageId}`);
+export async function getImageDataUrl(imageId: number, cacheUserId?: number | null): Promise<string> {
+  const qs =
+    cacheUserId != null && Number.isFinite(cacheUserId) ? `?cache_u=${cacheUserId}` : '';
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/images/${imageId}${qs}`);
 
   if (!response.ok) {
     throw new Error('获取图片失败');
@@ -324,6 +326,26 @@ export async function triggerImageOcr(imageId: number): Promise<void> {
   if (!result.success) {
     throw new Error(result.detail || '触发OCR失败');
   }
+}
+
+export async function updateOcrResult(ocrId: number, rawText: string): Promise<OcrAnalysis> {
+  const result = await fetchJson<OcrResultDetailResponse>(`${API_BASE_URL}/api/v1/ocr-results/${ocrId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ raw_text: rawText }),
+  });
+
+  if (!result.success) {
+    throw new Error(result.detail || '更新OCR结果失败');
+  }
+
+  return {
+    id: result.data.id,
+    imageId: result.data.image_id,
+    rawText: result.data.raw_text,
+    status: result.data.status,
+    createdAt: result.data.created_at,
+  };
 }
 
 export async function triggerStructuredAnalysis(ocrResultId: number): Promise<void> {

@@ -13,7 +13,8 @@ export type CrossDocRecordItem = {
   title: string;
   filename: string;
   uploadTime: string;
-  previewThumbnailDataUrls: string[];
+  /** 参与该跨文档任务的前若干张文书图片 ID，用于列表缩略图 */
+  previewImageIds: number[];
 };
 
 type ImageItem = {
@@ -28,6 +29,7 @@ type MultiTaskItem = {
   status: string;
   doc_count: number;
   created_at: string;
+  preview_image_ids?: number[];
 };
 
 type PagedIdsResponse = {
@@ -155,19 +157,38 @@ export async function getCrossDocRecordList(params?: {
 
   const taskItems = (listResult.data.items ?? []) as MultiTaskItem[];
 
-  const items = taskItems.map((task) => {
-    const createdDate = new Date(task.created_at);
-    const month = createdDate.getMonth() + 1;
-    const day = createdDate.getDate();
-    const hhmm = createdDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
-    return {
-      id: task.id,
-      title: `跨文档分析 · ${month}月${day}日 ${hhmm}`,
-      filename: `共 ${task.doc_count} 份文书`,
-      uploadTime: task.created_at,
-      previewThumbnailDataUrls: [],
-    } satisfies CrossDocRecordItem;
-  });
+  const items = await Promise.all(
+    taskItems.map(async (task) => {
+      const createdDate = new Date(task.created_at);
+      const month = createdDate.getMonth() + 1;
+      const day = createdDate.getDate();
+      const hhmm = createdDate.toLocaleTimeString('zh-CN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+
+      let previewImageIds = Array.isArray(task.preview_image_ids) ? task.preview_image_ids : [];
+      if (previewImageIds.length === 0) {
+        try {
+          const detail = await getMultiTaskDetail(task.id);
+          previewImageIds = await getPreviewImageIdsFromStructuredResults(
+            detail.structured_result_ids,
+          );
+        } catch {
+          previewImageIds = [];
+        }
+      }
+
+      return {
+        id: task.id,
+        title: `跨文档分析 · ${month}月${day}日 ${hhmm}`,
+        filename: `共 ${task.doc_count} 份文书`,
+        uploadTime: task.created_at,
+        previewImageIds,
+      } satisfies CrossDocRecordItem;
+    }),
+  );
 
   return items;
 }
@@ -237,8 +258,17 @@ export async function createCrossDocTaskFromImages(imageIds: number[]): Promise<
   return createResult.multi_task_id;
 }
 
-export function getThumbnailUrl(imageId: number): string {
-  return `${API_BASE_URL}/api/v1/images/${imageId}/thumbnail`;
+/**
+ * 缩略图 URL。必须带 cacheUserId：否则 expo-image / 系统 HTTP 缓存只认 URL，
+ * 不同账号或同机多用户会共用同一路径的缓存，出现「列表与详情全是错图」。
+ * 后端会忽略未知 query，路由仍按 image_id 解析。
+ */
+export function getThumbnailUrl(imageId: number, cacheUserId?: number | null): string {
+  const base = `${API_BASE_URL}/api/v1/images/${imageId}/thumbnail`;
+  if (cacheUserId != null && Number.isFinite(cacheUserId)) {
+    return `${base}?cache_u=${cacheUserId}`;
+  }
+  return base;
 }
 
 async function getMultiTaskDetail(taskId: number): Promise<MultiTaskDetailResponse['data']> {

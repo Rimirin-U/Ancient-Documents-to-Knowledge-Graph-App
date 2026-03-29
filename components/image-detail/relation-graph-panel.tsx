@@ -213,6 +213,11 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
   // ECharts 通过 WebView JSON 传参，各节点/连线的 label、lineStyle、itemStyle 已由后端按角色配置。
   // 前端只负责全局样式（主题色、force 参数等），per-node 样式以后端数据为准。
   const isDark = scheme === 'dark';
+  
+  const nodeCount = graphContent.nodes.length;
+  const dynamicRepulsion = Math.max(600, Math.min(2500, 400 + nodeCount * 50));
+  const dynamicEdgeMax = Math.max(200, Math.min(400, 150 + nodeCount * 8));
+
   const option = {
     backgroundColor: 'transparent',
     tooltip: {
@@ -239,12 +244,17 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
         links: graphContent.links,
         categories: graphContent.categories,
         roam: true,
+        edgeSymbol: ['none', 'arrow'],
+        edgeSymbolSize: [0, 8],
         // 全局标签默认（per-node label 会覆盖此处）
         label: {
           show: true,
           position: 'bottom',
           fontSize: 12,
           color: isDark ? '#e2e8f0' : '#1e293b',
+        },
+        labelLayout: {
+          hideOverlap: true,
         },
         // 边标签：系列级默认关闭，只有后端显式标记 label.show=true 的边才展示
         // （人物关系边显示"出卖/归属/见证/出售"，信息属性边不显示，避免重复）
@@ -263,8 +273,8 @@ export function RelationGraphPanel({ content }: RelationGraphPanelProps) {
           opacity: 0.85,
         },
         force: {
-          repulsion: 600,
-          edgeLength: [120, 220],
+          repulsion: dynamicRepulsion,
+          edgeLength: [120, dynamicEdgeMax],
           gravity: 0.12,
           layoutAnimation: true,
           friction: 0.6,

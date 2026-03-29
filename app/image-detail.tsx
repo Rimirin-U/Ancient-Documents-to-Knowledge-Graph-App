@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useAuth } from '@/context/auth-context';
 import { useColor } from '@/hooks/useColor';
 import {
   getImageDataUrl,
@@ -29,6 +30,7 @@ import {
   triggerImageOcr,
   triggerRelationGraphAnalysis,
   triggerStructuredAnalysis,
+  updateOcrResult,
 } from '@/services/analysis';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
@@ -40,6 +42,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
+  TextInput,
 } from 'react-native';
 
 type AnalysisStatus = 'pending' | 'processing' | 'done' | 'failed';
@@ -77,13 +80,23 @@ const IMAGE_AREA_RATIO = 0.75;
 
 export default function ImageDetailScreen() {
   const navigation = useNavigation();
+  const { userId } = useAuth();
   const { height } = useWindowDimensions();
   const toast = useToast();
   const pageSurface = useColor('background', { light: '#f6f7f9', dark: '#1d2229' });
-  const params = useLocalSearchParams<{ imageId?: string; title?: string }>();
+  const textColor = useColor('text', { light: '#000', dark: '#fff' });
+  const params = useLocalSearchParams<{ imageId?: string | string[]; title?: string | string[] }>();
 
-  const imageId = useMemo(() => Number(params.imageId), [params.imageId]);
-  const pageTitle = useMemo(() => params.title || '图片详情', [params.title]);
+  const imageId = useMemo(() => {
+    const raw = params.imageId;
+    const s = Array.isArray(raw) ? raw[0] : raw;
+    return Number(s);
+  }, [params.imageId]);
+  const pageTitle = useMemo(() => {
+    const raw = params.title;
+    const s = Array.isArray(raw) ? raw[0] : raw;
+    return s || '图片详情';
+  }, [params.title]);
 
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -100,6 +113,13 @@ export default function ImageDetailScreen() {
   const [selectedStructuredIndex, setSelectedStructuredIndex] = useState(0);
   const [selectedRelationIndex, setSelectedRelationIndex] = useState(0);
 
+  const [isEditingOcr, setIsEditingOcr] = useState(false);
+  const [editingOcrText, setEditingOcrText] = useState('');
+
+  /** 避免快速切换记录时，较慢的请求覆盖当前应显示的图片 */
+  const activeImageIdRef = useRef(imageId);
+  activeImageIdRef.current = imageId;
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: pageTitle,
@@ -107,7 +127,8 @@ export default function ImageDetailScreen() {
   }, [navigation, pageTitle]);
 
   const loadBaseData = useCallback(async (showLoading = true) => {
-    if (!Number.isFinite(imageId)) {
+    const targetImageId = imageId;
+    if (!Number.isFinite(targetImageId)) {
       setErrorMessage('缺少 imageId 参数');
       setLoading(false);
       return;
@@ -122,22 +143,29 @@ export default function ImageDetailScreen() {
 
     try {
       const [nextImageDataUrl, nextOcrIds] = await Promise.all([
-        getImageDataUrl(imageId),
-        getOcrIdsByImage(imageId),
+        getImageDataUrl(targetImageId, userId),
+        getOcrIdsByImage(targetImageId),
       ]);
+
+      if (activeImageIdRef.current !== targetImageId) {
+        return;
+      }
 
       setImageDataUrl(nextImageDataUrl);
       setOcrIds(nextOcrIds);
       setSelectedOcrIndex(nextOcrIds.length ? nextOcrIds.length - 1 : 0);
     } catch (error) {
+      if (activeImageIdRef.current !== targetImageId) {
+        return;
+      }
       const message = error instanceof Error ? error.message : '加载图片详情失败';
       setErrorMessage(message);
     } finally {
-      if (showLoading) {
+      if (showLoading && activeImageIdRef.current === targetImageId) {
         setLoading(false);
       }
     }
-  }, [imageId]);
+  }, [imageId, userId]);
 
   useEffect(() => {
     loadBaseData();
@@ -150,6 +178,7 @@ export default function ImageDetailScreen() {
 
   useEffect(() => {
     const selectedOcrId = ocrIds[selectedOcrIndex];
+    setIsEditingOcr(false);
 
     if (!selectedOcrId) {
       setSelectedOcr(null);
@@ -343,44 +372,56 @@ export default function ImageDetailScreen() {
   }
 
   /**
-   * 识别结果区「刷新」：
-   * - 已有 OCR 记录：只从服务端重新拉取列表与详情（不重复排队任务）。
-   * - 尚无记录：先 POST 触发识别，再轮询等待 Worker 写入 OcrResult（避免刚提交就立刻查仍为空）。
+   * 识别结果区「刷新」：始终 POST 触发 OCR（与后端「重新识别」一致），
+   * 轮询直到出现新的 OcrResult 记录（Worker 开始时即写入 PROCESSING 行）或超时。
    */
   async function handleOcrRefresh() {
     if (!Number.isFinite(imageId)) return;
     setActionLoading(true);
     try {
-      let ids = await getOcrIdsByImage(imageId);
-      let justTriggered = false;
+      const beforeIds = await getOcrIdsByImage(imageId);
+      const beforeSet = new Set(beforeIds);
 
-      if (ids.length === 0) {
-        await triggerImageOcr(imageId);
-        justTriggered = true;
-        toast.success('提示', '识别任务已提交，等待 Worker 写入记录…');
-        for (let attempt = 0; attempt < 30; attempt++) {
-          await new Promise((r) => setTimeout(r, 450));
-          ids = await getOcrIdsByImage(imageId);
-          if (ids.length > 0) break;
+      await triggerImageOcr(imageId);
+      toast.success('提示', '识别任务已提交，等待 Worker 写入记录…');
+
+      let ids = beforeIds;
+      let sawNew = false;
+      for (let attempt = 0; attempt < 30; attempt++) {
+        await new Promise((r) => setTimeout(r, 450));
+        ids = await getOcrIdsByImage(imageId);
+        sawNew = ids.some((id) => !beforeSet.has(id));
+        if (sawNew || (beforeIds.length === 0 && ids.length > 0)) {
+          break;
         }
-        if (ids.length === 0) {
-          toast.warning(
-            '提示',
-            '仍未出现识别记录。请确认服务器已启动 Celery Worker（需 Redis），并已配置 DASHSCOPE_API_KEY；也可稍后再次点刷新。',
-          );
-        }
+      }
+
+      if (!sawNew && beforeIds.length === 0 && ids.length === 0) {
+        toast.warning(
+          '提示',
+          '仍未出现识别记录。请确认服务器已启动 Celery Worker（需 Redis），并已配置 DASHSCOPE_API_KEY；也可稍后再次点刷新。',
+        );
+      } else if (!sawNew && beforeIds.length > 0) {
+        toast.warning(
+          '提示',
+          '暂未检测到新的识别记录，可能队列繁忙或 Worker 未消费任务，请稍后再试。',
+        );
       }
 
       setOcrIds(ids);
       setSelectedOcrIndex((prev) => {
         if (!ids.length) return 0;
-        if (justTriggered) return ids.length - 1;
+        const newOnes = ids.filter((id) => !beforeSet.has(id));
+        if (newOnes.length) {
+          const newestId = Math.max(...newOnes);
+          const idx = ids.indexOf(newestId);
+          return idx >= 0 ? idx : ids.length - 1;
+        }
+        if (beforeIds.length === 0 && ids.length > 0) {
+          return ids.length - 1;
+        }
         return Math.min(prev, ids.length - 1);
       });
-
-      if (!justTriggered && ids.length > 0) {
-        toast.success('提示', '已刷新识别状态');
-      }
     } catch (error) {
       const message = error instanceof Error ? error.message : '操作失败';
       toast.error('失败', message);
@@ -497,6 +538,33 @@ export default function ImageDetailScreen() {
     copyText(selectedOcr?.rawText ?? '', '暂无可复制的识别结果');
   }
 
+  function handleEditOcr() {
+    if (!selectedOcr) return;
+    setEditingOcrText(selectedOcr.rawText);
+    setIsEditingOcr(true);
+  }
+
+  async function handleSaveOcr() {
+    if (!selectedOcr) return;
+    setActionLoading(true);
+    try {
+      const updated = await updateOcrResult(selectedOcr.id, editingOcrText);
+      setSelectedOcr(updated);
+      setIsEditingOcr(false);
+      toast.success('提示', '识别结果修改成功');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '修改失败';
+      toast.error('失败', message);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  function handleCancelEditOcr() {
+    setIsEditingOcr(false);
+    setEditingOcrText('');
+  }
+
   const translatedStructuredItems = useMemo<StructuredDisplayItem[]>(() => {
     return toStructuredDisplayItems(selectedStructured?.content);
   }, [selectedStructured?.content]);
@@ -540,14 +608,35 @@ export default function ImageDetailScreen() {
               <ThemedText style={styles.processingText}>识别进行中，请稍候...</ThemedText>
             </View>
           ) : selectedOcr?.rawText ? (
-            <ScrollView style={styles.ocrScrollView} nestedScrollEnabled>
-              <ThemedText style={styles.ocrText} selectable>
-                {selectedOcr.rawText}
-              </ThemedText>
-            </ScrollView>
+            <View>
+              {isEditingOcr ? (
+                <View>
+                  <TextInput
+                    style={[styles.ocrTextInput, { color: textColor }]}
+                    multiline
+                    value={editingOcrText}
+                    onChangeText={setEditingOcrText}
+                  />
+                  <View style={styles.editActionRow}>
+                    <Button variant="outline" size="sm" onPress={handleCancelEditOcr} disabled={actionLoading}>
+                      取消
+                    </Button>
+                    <Button size="sm" onPress={handleSaveOcr} disabled={actionLoading}>
+                      保存
+                    </Button>
+                  </View>
+                </View>
+              ) : (
+                <ScrollView style={styles.ocrScrollView} nestedScrollEnabled>
+                  <ThemedText style={styles.ocrText} selectable>
+                    {selectedOcr.rawText}
+                  </ThemedText>
+                </ScrollView>
+              )}
+            </View>
           ) : (
             <ThemedText style={styles.hintText}>
-              暂无识别结果：点右侧刷新将提交识别并轮询记录；若 Worker 未启动则不会生成结果。
+              暂无识别结果：点右侧刷新将提交识别并轮询记录；已有结果时点刷新会重新识别；若 Worker 未启动则不会生成结果。
             </ThemedText>
           )}
           <ModuleActionBar
@@ -555,6 +644,7 @@ export default function ImageDetailScreen() {
             selectedIndex={selectedOcrIndex}
             onSelect={setSelectedOcrIndex}
             onCopy={handleCopyOcr}
+            onEdit={!isEditingOcr && selectedOcr?.rawText ? handleEditOcr : undefined}
             onRefresh={handleOcrRefresh}
             disabled={actionLoading}
           />
@@ -678,5 +768,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 8,
     letterSpacing: 0.3,
+  },
+  ocrTextInput: {
+    minHeight: 100,
+    maxHeight: 180,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    padding: 8,
+    fontSize: 14,
+    lineHeight: 22,
+    textAlignVertical: 'top',
+  },
+  editActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 8,
   },
 });
