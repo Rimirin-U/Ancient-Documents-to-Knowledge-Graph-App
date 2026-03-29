@@ -100,10 +100,13 @@ export default function Index() {
             <MaterialIcons name="menu-book" size={36} color={primary} />
           </View>
           <ThemedText type="title" style={styles.heroTitle}>
-            文书识别助手
+            文渊智图
           </ThemedText>
           <ThemedText style={[styles.heroSubtitle, { color: muted }]}>
-            上传古籍、地契照片，自动提取信息并支持智能问答
+            上传古籍、地契照片，自动提取信息
+          </ThemedText>
+          <ThemedText style={[styles.heroSubtitle, { color: muted }]}>
+            生成知识图谱，支持智能问答
           </ThemedText>
         </View>
 
@@ -186,7 +189,7 @@ const styles = StyleSheet.create({
   },
   heroSubtitle: {
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 16,
     textAlign: 'center',
     paddingHorizontal: 8,
   },
