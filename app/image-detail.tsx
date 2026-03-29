@@ -343,44 +343,56 @@ export default function ImageDetailScreen() {
   }
 
   /**
-   * 识别结果区「刷新」：
-   * - 已有 OCR 记录：只从服务端重新拉取列表与详情（不重复排队任务）。
-   * - 尚无记录：先 POST 触发识别，再轮询等待 Worker 写入 OcrResult（避免刚提交就立刻查仍为空）。
+   * 识别结果区「刷新」：始终 POST 触发 OCR（与后端「重新识别」一致），
+   * 轮询直到出现新的 OcrResult 记录（Worker 开始时即写入 PROCESSING 行）或超时。
    */
   async function handleOcrRefresh() {
     if (!Number.isFinite(imageId)) return;
     setActionLoading(true);
     try {
-      let ids = await getOcrIdsByImage(imageId);
-      let justTriggered = false;
+      const beforeIds = await getOcrIdsByImage(imageId);
+      const beforeSet = new Set(beforeIds);
 
-      if (ids.length === 0) {
-        await triggerImageOcr(imageId);
-        justTriggered = true;
-        toast.success('提示', '识别任务已提交，等待 Worker 写入记录…');
-        for (let attempt = 0; attempt < 30; attempt++) {
-          await new Promise((r) => setTimeout(r, 450));
-          ids = await getOcrIdsByImage(imageId);
-          if (ids.length > 0) break;
+      await triggerImageOcr(imageId);
+      toast.success('提示', '识别任务已提交，等待 Worker 写入记录…');
+
+      let ids = beforeIds;
+      let sawNew = false;
+      for (let attempt = 0; attempt < 30; attempt++) {
+        await new Promise((r) => setTimeout(r, 450));
+        ids = await getOcrIdsByImage(imageId);
+        sawNew = ids.some((id) => !beforeSet.has(id));
+        if (sawNew || (beforeIds.length === 0 && ids.length > 0)) {
+          break;
         }
-        if (ids.length === 0) {
-          toast.warning(
-            '提示',
-            '仍未出现识别记录。请确认服务器已启动 Celery Worker（需 Redis），并已配置 DASHSCOPE_API_KEY；也可稍后再次点刷新。',
-          );
-        }
+      }
+
+      if (!sawNew && beforeIds.length === 0 && ids.length === 0) {
+        toast.warning(
+          '提示',
+          '仍未出现识别记录。请确认服务器已启动 Celery Worker（需 Redis），并已配置 DASHSCOPE_API_KEY；也可稍后再次点刷新。',
+        );
+      } else if (!sawNew && beforeIds.length > 0) {
+        toast.warning(
+          '提示',
+          '暂未检测到新的识别记录，可能队列繁忙或 Worker 未消费任务，请稍后再试。',
+        );
       }
 
       setOcrIds(ids);
       setSelectedOcrIndex((prev) => {
         if (!ids.length) return 0;
-        if (justTriggered) return ids.length - 1;
+        const newOnes = ids.filter((id) => !beforeSet.has(id));
+        if (newOnes.length) {
+          const newestId = Math.max(...newOnes);
+          const idx = ids.indexOf(newestId);
+          return idx >= 0 ? idx : ids.length - 1;
+        }
+        if (beforeIds.length === 0 && ids.length > 0) {
+          return ids.length - 1;
+        }
         return Math.min(prev, ids.length - 1);
       });
-
-      if (!justTriggered && ids.length > 0) {
-        toast.success('提示', '已刷新识别状态');
-      }
     } catch (error) {
       const message = error instanceof Error ? error.message : '操作失败';
       toast.error('失败', message);
@@ -547,7 +559,7 @@ export default function ImageDetailScreen() {
             </ScrollView>
           ) : (
             <ThemedText style={styles.hintText}>
-              暂无识别结果：点右侧刷新将提交识别并轮询记录；若 Worker 未启动则不会生成结果。
+              暂无识别结果：点右侧刷新将提交识别并轮询记录；已有结果时点刷新会重新识别；若 Worker 未启动则不会生成结果。
             </ThemedText>
           )}
           <ModuleActionBar
