@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useAuth } from '@/context/auth-context';
 import { useColor } from '@/hooks/useColor';
 import {
   getImageDataUrl,
@@ -79,6 +80,7 @@ const IMAGE_AREA_RATIO = 0.75;
 
 export default function ImageDetailScreen() {
   const navigation = useNavigation();
+  const { userId } = useAuth();
   const { height } = useWindowDimensions();
   const toast = useToast();
   const pageSurface = useColor('background', { light: '#f6f7f9', dark: '#1d2229' });
@@ -141,7 +143,7 @@ export default function ImageDetailScreen() {
 
     try {
       const [nextImageDataUrl, nextOcrIds] = await Promise.all([
-        getImageDataUrl(targetImageId),
+        getImageDataUrl(targetImageId, userId),
         getOcrIdsByImage(targetImageId),
       ]);
 
@@ -163,7 +165,7 @@ export default function ImageDetailScreen() {
         setLoading(false);
       }
     }
-  }, [imageId]);
+  }, [imageId, userId]);
 
   useEffect(() => {
     loadBaseData();

@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { Image } from '@/components/ui/image';
+import { useAuth } from '@/context/auth-context';
 import { useColor } from '@/hooks/useColor';
 import { getToken } from '@/services/api';
 import { CrossDocRecordItem, getThumbnailUrl } from '@/services/record';
@@ -12,9 +13,11 @@ import { Pressable, StyleSheet, View } from 'react-native';
 function StackedPreviewThumb({
   imageId,
   recyclingKey,
+  cacheUserId,
 }: {
   imageId: number;
   recyclingKey: string;
+  cacheUserId: number | null;
 }) {
   const [source, setSource] = useState<ImageSource | undefined>();
 
@@ -23,14 +26,14 @@ function StackedPreviewThumb({
     getToken().then((token) => {
       if (cancelled) return;
       setSource({
-        uri: getThumbnailUrl(imageId),
+        uri: getThumbnailUrl(imageId, cacheUserId),
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
     });
     return () => {
       cancelled = true;
     };
-  }, [imageId]);
+  }, [imageId, cacheUserId]);
 
   if (!source) {
     return <View style={styles.image} />;
@@ -40,6 +43,7 @@ function StackedPreviewThumb({
     <Image
       source={source}
       recyclingKey={recyclingKey}
+      cachePolicy="none"
       contentFit="cover"
       variant="default"
       style={styles.image}
@@ -62,6 +66,7 @@ function CrossDocCardBase({
   onToggleSelect,
   onPress,
 }: CrossDocCardProps) {
+  const { userId } = useAuth();
   const cardBg = useColor('background', { light: '#f7f7f8', dark: '#1f2226' });
   const muted = useColor('icon', { light: '#5f6368', dark: '#a9b1ba' });
   const outline = useColor('icon', { light: '#d9dce1', dark: '#383d44' });
@@ -119,6 +124,7 @@ function CrossDocCardBase({
               >
                 <StackedPreviewThumb
                   imageId={imageId}
+                  cacheUserId={userId}
                   recyclingKey={`cross-doc-${item.id}-p${imageId}`}
                 />
               </View>

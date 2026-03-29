@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useAuth } from '@/context/auth-context';
 import { toStructuredDisplayItems } from '@/constants/structured-field-labels';
 import { useColor } from '@/hooks/useColor';
 import {
@@ -40,6 +41,7 @@ import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 export default function CrossDocDetailScreen() {
   const navigation = useNavigation();
   const router = useRouter();
+  const { userId } = useAuth();
   const params = useLocalSearchParams<{ taskId?: string; title?: string }>();
   const toast = useToast();
 
@@ -97,7 +99,7 @@ export default function CrossDocDetailScreen() {
         uniqueImageIds.map(async (imageId) => {
           const [info, imageDataUrl] = await Promise.all([
             getImageInfo(imageId),
-            getImageDataUrl(imageId),
+            getImageDataUrl(imageId, userId),
           ]);
 
           return {
@@ -129,7 +131,7 @@ export default function CrossDocDetailScreen() {
         setLoading(false);
       }
     }
-  }, [taskId]);
+  }, [taskId, userId]);
 
   useEffect(() => {
     loadData();

@@ -258,8 +258,17 @@ export async function createCrossDocTaskFromImages(imageIds: number[]): Promise<
   return createResult.multi_task_id;
 }
 
-export function getThumbnailUrl(imageId: number): string {
-  return `${API_BASE_URL}/api/v1/images/${imageId}/thumbnail`;
+/**
+ * 缩略图 URL。必须带 cacheUserId：否则 expo-image / 系统 HTTP 缓存只认 URL，
+ * 不同账号或同机多用户会共用同一路径的缓存，出现「列表与详情全是错图」。
+ * 后端会忽略未知 query，路由仍按 image_id 解析。
+ */
+export function getThumbnailUrl(imageId: number, cacheUserId?: number | null): string {
+  const base = `${API_BASE_URL}/api/v1/images/${imageId}/thumbnail`;
+  if (cacheUserId != null && Number.isFinite(cacheUserId)) {
+    return `${base}?cache_u=${cacheUserId}`;
+  }
+  return base;
 }
 
 async function getMultiTaskDetail(taskId: number): Promise<MultiTaskDetailResponse['data']> {

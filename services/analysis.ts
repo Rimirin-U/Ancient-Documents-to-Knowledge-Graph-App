@@ -220,8 +220,10 @@ function arrayBufferToDataUrl(buffer: ArrayBuffer, mimeType: string): string {
   return `data:${mimeType};base64,${globalThis.btoa(binary)}`;
 }
 
-export async function getImageDataUrl(imageId: number): Promise<string> {
-  const response = await apiFetch(`${API_BASE_URL}/api/v1/images/${imageId}`);
+export async function getImageDataUrl(imageId: number, cacheUserId?: number | null): Promise<string> {
+  const qs =
+    cacheUserId != null && Number.isFinite(cacheUserId) ? `?cache_u=${cacheUserId}` : '';
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/images/${imageId}${qs}`);
 
   if (!response.ok) {
     throw new Error('获取图片失败');

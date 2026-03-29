@@ -2,6 +2,7 @@ import { CrossDocImageDetailInfo } from '@/components/cross-doc-detail/image-inf
 import { AnalysisSectionCard } from '@/components/image-detail/analysis-section-card';
 import { Image } from '@/components/ui/image';
 import { ThemedText } from '@/components/themed-text';
+import { useAuth } from '@/context/auth-context';
 import { getToken } from '@/services/api';
 import { getThumbnailUrl } from '@/services/record';
 import { ImageSource } from 'expo-image';
@@ -34,6 +35,7 @@ const GalleryThumbCell = memo(function GalleryThumbCell({
   borderRadius: number;
   onPress: () => void;
 }) {
+  const { userId } = useAuth();
   const [source, setSource] = useState<ImageSource | undefined>();
 
   useEffect(() => {
@@ -41,14 +43,14 @@ const GalleryThumbCell = memo(function GalleryThumbCell({
     getToken().then((token) => {
       if (cancelled) return;
       setSource({
-        uri: getThumbnailUrl(imageId),
+        uri: getThumbnailUrl(imageId, userId),
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
     });
     return () => {
       cancelled = true;
     };
-  }, [imageId]);
+  }, [imageId, userId]);
 
   return (
     <Pressable
@@ -65,7 +67,8 @@ const GalleryThumbCell = memo(function GalleryThumbCell({
       {source ? (
         <Image
           source={source}
-          recyclingKey={`cross-doc-gallery-${imageId}`}
+          recyclingKey={getThumbnailUrl(imageId, userId)}
+          cachePolicy="none"
           contentFit="cover"
           variant="default"
           style={styles.cellImage}
