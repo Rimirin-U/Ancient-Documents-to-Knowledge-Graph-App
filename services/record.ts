@@ -28,6 +28,7 @@ type MultiTaskItem = {
   status: string;
   doc_count: number;
   created_at: string;
+  preview_image_ids?: number[];
 };
 
 type PagedIdsResponse = {
@@ -165,7 +166,7 @@ export async function getCrossDocRecordList(params?: {
       title: `跨文档分析 · ${month}月${day}日 ${hhmm}`,
       filename: `共 ${task.doc_count} 份文书`,
       uploadTime: task.created_at,
-      previewThumbnailDataUrls: [],
+      previewThumbnailDataUrls: (task.preview_image_ids || []).map(getThumbnailUrl),
     } satisfies CrossDocRecordItem;
   });
 

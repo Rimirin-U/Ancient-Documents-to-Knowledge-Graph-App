@@ -4,8 +4,10 @@ import { Image } from '@/components/ui/image';
 import { useColor } from '@/hooks/useColor';
 import { CrossDocRecordItem } from '@/services/record';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { memo, useMemo } from 'react';
+import { ImageSource } from 'expo-image';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { getToken } from '@/services/api';
 
 type CrossDocCardProps = {
   item: CrossDocRecordItem;
@@ -29,6 +31,23 @@ function CrossDocCardBase({
   const thumbnailBg = useColor('screen');
   const checkTint = useColor('tint');
 
+  const [imageSources, setImageSources] = useState<ImageSource[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const urls = item.previewThumbnailDataUrls.slice(0, 3);
+    if (!urls.length) {
+      setImageSources([]);
+      return;
+    }
+    getToken().then((token) => {
+      if (cancelled) return;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      setImageSources(urls.map(url => ({ uri: url, headers })));
+    });
+    return () => { cancelled = true; };
+  }, [item.previewThumbnailDataUrls]);
+
   const uploadText = useMemo(() => {
     const date = new Date(item.uploadTime);
     if (Number.isNaN(date.getTime())) return item.uploadTime;
@@ -49,8 +68,6 @@ function CrossDocCardBase({
     onPress?.(item);
   }
 
-  const previews = item.previewThumbnailDataUrls.slice(0, 3);
-
   return (
     <Pressable onPress={handlePress}>
       <Card style={[styles.container, { backgroundColor: cardBg }]}>
@@ -63,8 +80,8 @@ function CrossDocCardBase({
         ) : null}
 
         <View style={styles.stackWrap}>
-          {previews.length ? (
-            previews.map((url, index) => (
+          {imageSources.length ? (
+            imageSources.map((source, index) => (
               <View
                 key={`${item.id}-${index}`}
                 style={[
@@ -73,12 +90,12 @@ function CrossDocCardBase({
                     borderColor: outline,
                     backgroundColor: thumbnailBg,
                     left: index * 12,
-                    zIndex: previews.length - index,
+                    zIndex: imageSources.length - index,
                   },
                 ]}
               >
                 <Image
-                  source={{ uri: url }}
+                  source={source}
                   recyclingKey={`cross-doc-${item.id}-p${index}`}
                   contentFit="cover"
                   variant="default"
