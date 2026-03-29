@@ -326,6 +326,26 @@ export async function triggerImageOcr(imageId: number): Promise<void> {
   }
 }
 
+export async function updateOcrResult(ocrId: number, rawText: string): Promise<OcrAnalysis> {
+  const result = await fetchJson<OcrResultDetailResponse>(`${API_BASE_URL}/api/v1/ocr-results/${ocrId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ raw_text: rawText }),
+  });
+
+  if (!result.success) {
+    throw new Error(result.detail || '更新OCR结果失败');
+  }
+
+  return {
+    id: result.data.id,
+    imageId: result.data.image_id,
+    rawText: result.data.raw_text,
+    status: result.data.status,
+    createdAt: result.data.created_at,
+  };
+}
+
 export async function triggerStructuredAnalysis(ocrResultId: number): Promise<void> {
   const result = await fetchJson<ApiErrorShape>(`${API_BASE_URL}/api/v1/structured-results`, {
     method: 'POST',

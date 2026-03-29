@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { useColor } from '@/hooks/useColor';
-import { Copy, RefreshCw } from 'lucide-react-native';
+import { Copy, RefreshCw, Edit2 } from 'lucide-react-native';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 type ModuleActionBarProps = {
@@ -9,6 +9,7 @@ type ModuleActionBarProps = {
   selectedIndex: number;
   onSelect: (index: number) => void;
   onCopy?: () => void;
+  onEdit?: () => void;
   onRefresh: () => void;
   disabled?: boolean;
 };
@@ -18,6 +19,7 @@ export function ModuleActionBar({
   selectedIndex,
   onSelect,
   onCopy,
+  onEdit,
   onRefresh,
   disabled,
 }: ModuleActionBarProps) {
@@ -61,6 +63,9 @@ export function ModuleActionBar({
       </ScrollView>
 
       <View style={styles.iconGroup}>
+        {onEdit ? (
+          <Button size="icon" variant="outline" icon={Edit2} onPress={onEdit} disabled={disabled} />
+        ) : null}
         {onCopy ? (
           <Button size="icon" variant="outline" icon={Copy} onPress={onCopy} disabled={disabled} />
         ) : null}

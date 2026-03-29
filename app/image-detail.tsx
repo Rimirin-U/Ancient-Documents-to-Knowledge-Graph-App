@@ -29,6 +29,7 @@ import {
   triggerImageOcr,
   triggerRelationGraphAnalysis,
   triggerStructuredAnalysis,
+  updateOcrResult,
 } from '@/services/analysis';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
@@ -40,6 +41,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
+  TextInput,
 } from 'react-native';
 
 type AnalysisStatus = 'pending' | 'processing' | 'done' | 'failed';
@@ -100,6 +102,9 @@ export default function ImageDetailScreen() {
   const [selectedStructuredIndex, setSelectedStructuredIndex] = useState(0);
   const [selectedRelationIndex, setSelectedRelationIndex] = useState(0);
 
+  const [isEditingOcr, setIsEditingOcr] = useState(false);
+  const [editingOcrText, setEditingOcrText] = useState('');
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: pageTitle,
@@ -150,6 +155,7 @@ export default function ImageDetailScreen() {
 
   useEffect(() => {
     const selectedOcrId = ocrIds[selectedOcrIndex];
+    setIsEditingOcr(false);
 
     if (!selectedOcrId) {
       setSelectedOcr(null);
@@ -509,6 +515,33 @@ export default function ImageDetailScreen() {
     copyText(selectedOcr?.rawText ?? '', '暂无可复制的识别结果');
   }
 
+  function handleEditOcr() {
+    if (!selectedOcr) return;
+    setEditingOcrText(selectedOcr.rawText);
+    setIsEditingOcr(true);
+  }
+
+  async function handleSaveOcr() {
+    if (!selectedOcr) return;
+    setActionLoading(true);
+    try {
+      const updated = await updateOcrResult(selectedOcr.id, editingOcrText);
+      setSelectedOcr(updated);
+      setIsEditingOcr(false);
+      toast.success('提示', '识别结果修改成功');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '修改失败';
+      toast.error('失败', message);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  function handleCancelEditOcr() {
+    setIsEditingOcr(false);
+    setEditingOcrText('');
+  }
+
   const translatedStructuredItems = useMemo<StructuredDisplayItem[]>(() => {
     return toStructuredDisplayItems(selectedStructured?.content);
   }, [selectedStructured?.content]);
@@ -552,11 +585,32 @@ export default function ImageDetailScreen() {
               <ThemedText style={styles.processingText}>识别进行中，请稍候...</ThemedText>
             </View>
           ) : selectedOcr?.rawText ? (
-            <ScrollView style={styles.ocrScrollView} nestedScrollEnabled>
-              <ThemedText style={styles.ocrText} selectable>
-                {selectedOcr.rawText}
-              </ThemedText>
-            </ScrollView>
+            <View>
+              {isEditingOcr ? (
+                <View>
+                  <TextInput
+                    style={[styles.ocrTextInput, { color: useColor('text', { light: '#000', dark: '#fff' }) }]}
+                    multiline
+                    value={editingOcrText}
+                    onChangeText={setEditingOcrText}
+                  />
+                  <View style={styles.editActionRow}>
+                    <Button variant="outline" size="sm" onPress={handleCancelEditOcr} disabled={actionLoading}>
+                      取消
+                    </Button>
+                    <Button size="sm" onPress={handleSaveOcr} disabled={actionLoading}>
+                      保存
+                    </Button>
+                  </View>
+                </View>
+              ) : (
+                <ScrollView style={styles.ocrScrollView} nestedScrollEnabled>
+                  <ThemedText style={styles.ocrText} selectable>
+                    {selectedOcr.rawText}
+                  </ThemedText>
+                </ScrollView>
+              )}
+            </View>
           ) : (
             <ThemedText style={styles.hintText}>
               暂无识别结果：点右侧刷新将提交识别并轮询记录；已有结果时点刷新会重新识别；若 Worker 未启动则不会生成结果。
@@ -567,6 +621,7 @@ export default function ImageDetailScreen() {
             selectedIndex={selectedOcrIndex}
             onSelect={setSelectedOcrIndex}
             onCopy={handleCopyOcr}
+            onEdit={!isEditingOcr && selectedOcr?.rawText ? handleEditOcr : undefined}
             onRefresh={handleOcrRefresh}
             disabled={actionLoading}
           />
@@ -690,5 +745,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 8,
     letterSpacing: 0.3,
+  },
+  ocrTextInput: {
+    minHeight: 100,
+    maxHeight: 180,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    padding: 8,
+    fontSize: 14,
+    lineHeight: 22,
+    textAlignVertical: 'top',
+  },
+  editActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 8,
   },
 });
