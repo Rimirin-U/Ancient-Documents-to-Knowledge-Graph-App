@@ -1,5 +1,6 @@
 {
   "name": "testapp",
+  "description": "文渊智图 — 古代地契文书智能知识图谱系统（前端）",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {

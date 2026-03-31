@@ -1,154 +1,158 @@
-# 古代地契文书知识图谱 · 前端（Expo）
+# 文渊智图 — 古代地契文书智能知识图谱系统
 
-展示名 **文渊智图**（见 `app.config.js` 的 `expo.name`）。工程为 **Expo SDK 54** + **expo-router** + **React Native 0.81** / **React 19**（以 `package.json` 为准）。
+> 基于 AI 的古代地契文书数字化与知识图谱构建移动应用
 
-## 环境
+## 项目简介
 
-```bash
-npm install
+**文渊智图**是一款面向古代地契文书的智能分析移动应用。用户只需拍照或上传地契文书图片，系统即可自动完成 OCR 文字识别、结构化信息提取、知识图谱构建等全流程处理，并支持跨文档关联分析与基于文档知识库的智能问答，为古代地契文书的数字化保护与学术研究提供高效工具。
+
+## 核心功能
+
+### 1. 智能文书识别与分析
+
+- **图像上传**：支持拍照或从相册选择古代地契图片，自动压缩优化后上传
+- **OCR 文字识别**：自动识别古代文书中的手写/印刷文字，并支持人工校对
+- **结构化信息提取**：从 OCR 文本中智能提取卖方、买方、中人、交易标的、价格、时间、地点等关键字段
+- **知识图谱生成**：基于结构化数据自动构建人物关系图谱，直观展现交易各方之间的关联关系
+
+### 2. 跨文档关联分析
+
+- **多文书综合分析**：支持选取多份文书进行跨文档知识图谱构建
+- **土地流转链追踪**：追溯同一地块在不同时期的交易历史
+- **人物社会网络分析**：识别跨文书出现的关键人物，发现宗族关系与中人网络
+- **统计洞察**：自动生成年代分布、价格趋势、地域分布等多维度统计报告
+
+### 3. 智能知识问答
+
+- **RAG 检索增强问答**：基于全部已分析文书构建知识库，支持自然语言提问
+- **流式响应（SSE）**：实时流式输出回答，体验流畅
+- **来源溯源**：每条回答附带引用来源，可追溯到具体文书
+
+### 4. 数据统计与可视化
+
+- **时间分布**：文书年代分布可视化
+- **地域分布**：交易发生地的地域热力统计
+- **人物排行**：高频出现人物排名
+- **价格趋势**：历年交易价格变化趋势图
+
+### 5. 跨平台支持
+
+- 支持 **Android**、**iOS**、**Web** 三端运行
+- 自适应浅色/深色主题
+
+## 技术架构
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    文渊智图 · 前端                        │
+│              Expo SDK 54 + React Native 0.81             │
+│                      + React 19                          │
+├───────────┬───────────┬───────────┬──────────┬──────────┤
+│   首页    │   记录    │   问答    │   统计   │   我的   │
+│  图片上传 │ 分析历史  │ RAG 问答  │  ECharts │ 个人中心 │
+│  拍照/相册│ 单文书详情│ SSE 流式  │  可视化  │ 登录认证 │
+│           │ 跨文档分析│ 来源溯源  │          │          │
+├───────────┴───────────┴───────────┴──────────┴──────────┤
+│                    RESTful API 通信层                     │
+│          JWT 鉴权 · Token 自动刷新 · 安全存储             │
+├─────────────────────────────────────────────────────────┤
+│                      后端服务                            │
+│     OCR 引擎 · 大模型结构化 · 知识图谱 · 向量检索        │
+└─────────────────────────────────────────────────────────┘
 ```
 
-建议使用与 Expo SDK 匹配的 Node 版本（参见 [Expo 文档](https://docs.expo.dev/)）。
+## 技术栈
 
-## 运行
+| 层级 | 技术选型 |
+|------|----------|
+| 框架 | Expo SDK 54 + expo-router（文件式路由） |
+| 前端 | React Native 0.81 + React 19（New Architecture） |
+| 可视化 | ECharts（WebView/iframe 双端适配） |
+| 状态管理 | React Context + Hooks |
+| 网络 | 自研 apiFetch 封装（JWT Bearer + 401 自动刷新） |
+| 安全存储 | expo-secure-store（原生）/ localStorage（Web） |
+| 图像处理 | expo-image-manipulator（压缩）+ expo-image-picker（选取） |
+| 相机 | expo-camera |
+| 构建部署 | EAS Build（development / preview / production） |
+
+## 项目结构
+
+```
+├── app/                    # 页面（文件式路由）
+│   ├── (tabs)/             # Tab 页面
+│   │   ├── index.tsx       # 首页（上传入口）
+│   │   ├── record.tsx      # 分析记录
+│   │   ├── chat.tsx        # 智能问答
+│   │   ├── statistics.tsx  # 数据统计
+│   │   └── profile.tsx     # 个人中心
+│   ├── detail.tsx          # 记录详情
+│   ├── image-detail.tsx    # 单文书分析详情
+│   ├── cross-doc-detail.tsx# 跨文档分析详情
+│   ├── login.tsx           # 登录
+│   └── register.tsx        # 注册
+├── components/             # 组件
+│   ├── echarts/            # ECharts 图表（Web/Native 双端）
+│   ├── image-detail/       # 单文书详情组件
+│   ├── cross-doc-detail/   # 跨文档详情组件
+│   ├── record/             # 记录列表组件
+│   └── ui/                 # 通用 UI 组件库
+├── services/               # API 服务层
+│   ├── api.ts              # 请求封装与鉴权
+│   ├── analysis.ts         # 图像分析（OCR/结构化/图谱）
+│   ├── cross-doc.ts        # 跨文档分析
+│   ├── chat.ts             # 智能问答（SSE 流式）
+│   └── statistics.ts       # 统计数据
+├── context/                # React Context（认证状态）
+├── hooks/                  # 自定义 Hooks
+├── theme/                  # 主题配色
+└── assets/                 # 静态资源
+```
+
+## 快速开始
+
+### 环境要求
+
+- Node.js（建议与 Expo SDK 54 兼容的版本）
+- npm 或 yarn
+- Expo Go App（真机预览）或浏览器（Web 预览）
+
+### 安装与运行
 
 ```bash
+# 安装依赖
+npm install
+
+# 启动开发服务器
 npx expo start
 ```
 
-`package.json` 中相关脚本：
+启动后：
+- 使用 **Expo Go** 扫描终端二维码在手机上预览
+- 按 **`w`** 在浏览器中打开 Web 版本
+- 按 **`a`** 启动 Android 模拟器
+- 按 **`i`** 启动 iOS 模拟器
 
-| 脚本 | 说明 |
+### 后端配置
+
+应用默认连接演示后端服务器。如需自定义后端地址：
+
+1. 复制 `.env.example` 为 `.env`
+2. 修改 `EXPO_PUBLIC_API_BASE_URL` 为目标后端地址
+3. 重启开发服务器
+
+## 创新点
+
+1. **全链路智能化**：从图片上传到知识图谱生成，实现古代文书分析的全流程自动化，大幅降低人工标注成本
+2. **跨文档关联发现**：突破单文书分析局限，通过多文书联合分析发现隐藏的人物关系、土地流转链和社会网络
+3. **RAG 知识问答**：将结构化文书数据转化为可检索知识库，支持自然语言交互式查询，降低学术研究门槛
+4. **跨平台一致体验**：基于 React Native 的 Android/iOS/Web 三端覆盖，ECharts 双端自适应渲染，确保可视化效果一致
+5. **文化遗产数字化**：为古代地契文书的保护与研究提供现代化技术手段，助力中华传统文化的传承与发掘
+
+## 应用信息
+
+| 项目 | 内容 |
 |------|------|
-| `npm run start` / `npx expo start` | 默认启动 Metro |
-| `npm run start:go` | `expo start --go`，便于 Expo Go |
-| `npm run start:tunnel` | `expo start --tunnel` |
-| `npm run start:tunnel:go` | 隧道 + Expo Go |
-| `npm run android` / `ios` / `web` | 各平台开发启动 |
-
-- 使用 **Expo Go** 扫描终端二维码在真机预览。
-- 在终端按 **`w`** 在浏览器中打开（Web）。
-
-## API 基础地址（与代码一致）
-
-运行时基址为 **`services/config.ts`** 导出的 **`API_BASE_URL`**，解析顺序为：
-
-1. **`Constants.expoConfig?.extra?.apiBaseUrl`**（由 **`app.config.js`** 在构建/启动时写入 `expo.extra`）
-2. 若上为空字符串，则用 **`process.env.EXPO_PUBLIC_API_BASE_URL`**
-3. 再否则使用 **`services/config.ts` 内硬编码 `fallback`**（当前为 **`http://8.162.9.49:3000`**，须与 `app.config.js` 中 **`DEFAULT_API`** 保持一致）
-
-**`app.config.js`** 逻辑（单一事实来源之一）：`require('dotenv').config()` 后，取 `process.env.EXPO_PUBLIC_API_BASE_URL`（去尾斜杠）；若为空则使用 **`DEFAULT_API`**（当前 **`http://8.162.9.49:3000`**），赋给 `expo.extra.apiBaseUrl`，并执行 `process.env.EXPO_PUBLIC_API_BASE_URL = apiBaseUrl`。
-
-**本地/局域网/自建后端**：复制 **`.env.example`** 为 **`.env`**，设置 `EXPO_PUBLIC_API_BASE_URL=http://<主机>:<端口>`（无尾斜杠，端口与后端 `uvicorn` 一致，默认常为 **3000**），保存后**必须重启** `npx expo start`。也可直接修改 **`app.config.js`** 的 **`DEFAULT_API`** 与 **`services/config.ts`** 的 **`fallback`**（两处应同值，避免 Expo Go 与裸 `process.env` 路径不一致）。
-
-**EAS 构建**：**`eas.json`** 在 `development` / `preview` / `production` 的 `env` 中均注入了 `EXPO_PUBLIC_API_BASE_URL`（当前为演示服务器地址）；换环境构建时需同步修改各 profile。
-
-手机非局域网访问时，后端需监听 **`0.0.0.0`**，并放行云安全组/防火墙对应 **TCP** 端口。
-
-## 网络与鉴权
-
-- 通用请求封装：**`services/api.ts`** 的 **`apiFetch`**：附带 `Authorization: Bearer <token>`；响应 **401** 时请求 **`POST /api/v1/auth/refresh`** 刷新，成功则重试一次；仍失败则清除本地 **`auth_token`**、**`auth_expires_at`**（键名见 `api.ts`）。
-- 登录后本地过期时间按 **`TOKEN_TTL_MS = 24 * 60 * 60 * 1000`** 写入，与刷新成功后的续期方式一致（与后端 JWT 有效期应对齐，以后端为准）。
-- **FormData** 上传时会**删除**手动设置的 `content-type`，以便由运行时生成 `multipart` boundary（见 `apiFetch` 注释）。
-
-## 本地存储
-
-**`services/storage.ts`**：**iOS/Android** 使用 **`expo-secure-store`**；**Web** 使用 **`localStorage`**。`clearStorage` 在 Web 为 `localStorage.clear()`，在原生侧仅删除 `auth_token`、`auth_expires_at`。
-
-## 路由与 Tab
-
-- 根布局 **`app/_layout.tsx`**：**`RouteGuard`** 在未登录且非 `login`/`register` 时跳转 **`/login`**；已登录访问登录/注册页则跳转 **`/(tabs)`**。
-- Tab（**`app/(tabs)/_layout.tsx`**）：**首页**、**记录**、**问答**、**统计**、**我的**；另有 **`image-detail`**、**`cross-doc-detail`**、**`edit-profile`** 等 Stack 页面。
-
-## ECharts
-
-图表在 **`components/echarts/`**：**`echarts.tsx`**（Web，**iframe**）、**`echarts.native.tsx`**（iOS/Android，**WebView**）。Metro 按平台自动解析 **`.native`** 文件。
-
-**`<Chart>` Props**（两平台一致，见类型定义）：
-
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| `option` | `any` | ECharts `option`；更新引用会触发重绘 |
-| `onGesture` | `(isBusy: boolean) => void` | 图表内手势时通知外层（如禁用 `ScrollView`） |
-| `theme` | `'light' \| 'dark'` | 主题 |
-| `height?` | `number` | 高度；默认 **Web 450**、**Native 480** |
-| `onNodeClick?` | `(node: NodeClickData) => void` | 节点点击；**`NodeClickData`** 含 `name`、`category`、`symbolSize`、`properties`、`seriesType` |
-
-实现细节：若 `option.legend` 为数组，会取第一项再传给内嵌页面（与 ECharts 期望一致）。
-
-### 图谱数据格式（与后端/前端解析一致）
-
-后端单文书图谱主格式为 **`{ nodes, links, categories }`**（`categories[].name` 多为 **卖方 / 买方 / 中人 / 契约 / 信息**）。**`components/image-detail/relation-graph-panel.tsx`** 同时支持：
-
-- 上述 **nodes/links/categories** 对象；
-- 或 **`series` 中含 `type: 'graph'`** 的 ECharts 整包 option（从中抽取 `data`、`links`、`categories`）。
-
-兼容旧数据：英文分类名 **Seller / Buyer / Middleman / Other** 会映射为中文展示。节点若带 **`id`**，面板内会去掉 **`id`** 并以 **`name`** 对齐连线，避免与 `source`/`target` 不匹配。
-
-### `option` 示例（`nodes` / `links` 形式，与当前后端单文书风格一致）
-
-```json
-{
-  "nodes": [
-    {
-      "name": "恆忠",
-      "category": 0,
-      "symbolSize": 46,
-      "value": "卖方",
-      "properties": { "角色": "卖方" }
-    },
-    {
-      "name": "地契",
-      "category": 3,
-      "symbol": "diamond",
-      "symbolSize": 64,
-      "value": "契约凭证"
-    }
-  ],
-  "links": [
-    { "source": "恆忠", "target": "地契", "value": "出卖" }
-  ],
-  "categories": [
-    { "name": "卖方" },
-    { "name": "买方" },
-    { "name": "中人" },
-    { "name": "契约" },
-    { "name": "信息" }
-  ]
-}
-```
-
-### 使用示例
-
-```tsx
-import { Chart } from '@/components/echarts/echarts';
-
-<Chart
-  option={option}
-  theme="light"
-  height={480}
-  onGesture={(isBusy) => setScrollEnabled(!isBusy)}
-  onNodeClick={(node) => console.log(node.name, node.properties)}
-/>
-```
-
-## 应用配置（`app.config.js` 摘要）
-
-| 项 | 当前值/说明 |
-|----|-------------|
-| `expo.name` | `文渊智图` |
-| `expo.slug` / `scheme` | `testapp`（与 `package.json` 的 `name` 一致，便于 deep link） |
-| `android.package` | `com.zmj66.testapp` |
-| `newArchEnabled` | `true` |
-| `experiments.reactCompiler` | `false`（注释说明为减少与 Expo Go 差异） |
-| `experiments.typedRoutes` | `true` |
-| `ios.infoPlist.NSAppTransportSecurity` | `NSAllowsArbitraryLoads: true` |
-| `android.usesCleartextTraffic` | `true`（且 `expo-build-properties` 中重复声明） |
-| `plugins` | `expo-router`、`expo-build-properties`、`expo-splash-screen`、`expo-secure-store` |
-| `extra.eas.projectId` | EAS 项目 ID（见配置文件） |
-
-**`@wuba/react-native-echarts` 与 `echarts` 包**在 `package.json` 中声明；实际图谱渲染以上述自研 **WebView / iframe + `echartsHtml`** 路径为主。
-
-## 依赖说明
-
-仓库内 **`@wuba/react-native-echarts`**、**`echarts`** 等与 `package.json` 一致；请勿仅凭本文档版本号，以 **`package.json` / `package-lock.json`** 为准。
+| 应用名称 | 文渊智图 |
+| 版本 | 1.0.0 |
+| 支持平台 | Android / iOS / Web |
+| 开发框架 | Expo SDK 54 |
